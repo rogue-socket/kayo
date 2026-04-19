@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "owner": "Yash",
+    "defaultCurrency": "INR",
+    "lastUpdated": "2026-04-19"
+  },
+  "expenses": [
+    {
+      "id": "exp-20260418-001",
+      "date": "2026-04-18",
+      "category": "Food",
+      "amount": 320,
+      "currency": "INR",
+      "note": "Lunch",
+      "paymentMethod": "UPI"
+    },
+    {
+      "id": "exp-20260419-001",
+      "date": "2026-04-19",
+      "category": "Transport",
+      "amount": 180,
+      "currency": "INR",
+      "note": "Cab",
+      "paymentMethod": "Card"
+    }
+  ],
+  "income": [
+    {
+      "id": "inc-20260401-001",
+      "date": "2026-04-01",
+      "source": "Salary",
+      "amount": 120000,
+      "currency": "INR",
+      "note": "Monthly salary"
+    },
+    {
+      "id": "inc-20260415-001",
+      "date": "2026-04-15",
+      "source": "Freelance",
+      "amount": 15000,
+      "currency": "INR",
+      "note": "Project payment"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "sub-001",
+      "name": "Spotify",
+      "amount": 119,
+      "currency": "INR",
+      "frequency": "monthly",
+      "startDate": "2025-06-10",
+      "renewalMonthDay": "06-10",
+      "active": true
+    },
+    {
+      "id": "sub-002",
+      "name": "GitHub Copilot",
+      "amount": 1000,
+      "currency": "INR",
+      "frequency": "yearly",
+      "startDate": "2025-09-01",
+      "renewalMonthDay": "09-01",
+      "active": true
+    }
+  ],
+  "budgets": [
+    {
+      "id": "bud-2026-04-food",
+      "period": "monthly",
+      "year": 2026,
+      "month": 4,
+      "category": "Food",
+      "limit": 12000,
+      "currency": "INR"
+    },
+    {
+      "id": "bud-2026-04-transport",
+      "period": "monthly",
+      "year": 2026,
+      "month": 4,
+      "category": "Transport",
+      "limit": 6000,
+      "currency": "INR"
+    }
+  ],
+  "investments": {
+    "ppf": {
+      "accountName": "Public Provident Fund",
+      "annualDepositTarget": 150000,
+      "interestRatePercent": 7.1,
+      "yearlyContributions": [
+        {
+          "year": 2025,
+          "amount": 120000,
+          "date": "2025-12-15",
+          "note": "Main annual deposit"
+        },
+        {
+          "year": 2026,
+          "amount": 50000,
+          "date": "2026-04-10",
+          "note": "Part payment"
+        }
+      ]
+    }
+  }
+}
