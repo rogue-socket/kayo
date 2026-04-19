@@ -38,6 +38,8 @@ When the user asks to track or review money, use this process
 5. Reporting rules
 - If user asks for a period report, compute totals for day, week, month, or year
 - Include total income, total expenses, net savings, and top categories when possible
+- Always provide an analysis of the user's finances, not just raw numbers
+- If the dashboard UI exists or is relevant to the request, include the full /dashboard.html localhost link as a companion to the analysis
 - For PPF:
   - show contribution total for requested year
   - show done/not done against annualDepositTarget
@@ -49,5 +51,6 @@ When the user asks to track or review money, use this process
 
 7. Launch dashboard on invoke
 - If the user asks to open or launch the finance UI, run finance/run-dashboard.sh
-- Return only the localhost dashboard URL with no extra text when requested
+- Return only the full dashboard URL with no extra text when requested
+- Always return a URL ending in /dashboard.html, never a bare localhost root
 - Use localhost only (127.0.0.1), never a public or remote URL
