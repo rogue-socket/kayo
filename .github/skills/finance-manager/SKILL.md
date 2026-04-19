@@ -16,6 +16,7 @@ When the user asks to track or review money, use this process
 - subscriptions in subscriptions[]
 - budget targets in budgets[]
 - long term investments in investments, including ppf
+- subscriptions should be first-class records the user can add, review, and update
 
 3. Record formats
 - expense record: id, date (YYYY-MM-DD), category, amount, currency, note, paymentMethod
@@ -31,6 +32,7 @@ When the user asks to track or review money, use this process
 - When logging a new item, append a new object with a deterministic id:
   - exp-YYYYMMDD-### for expenses
   - inc-YYYYMMDD-### for income
+  - sub-### for subscriptions
 - Do not change date formats
 - For PPF yearly checks, determine done status by comparing yearly contribution sum with annualDepositTarget
 - Always keep amounts as numbers, not strings
@@ -47,6 +49,10 @@ When the user asks to track or review money, use this process
 
 6. UI integration
 - The HTML dashboard reads this JSON and can store user edits in browser local cache for quick testing
+- The dashboard should let the user switch between expenses and subscriptions as separate tabs in the spending area
+- The dashboard should provide clear separate forms to add expenses, income, and subscriptions
+- The dashboard should also allow adding new subscriptions from the UI
+- Common settings should be easily configurable in the UI (default currency, common categories/sources/payment methods)
 - If the user asks to permanently save dashboard-entered sample entries, sync those entries back into finance/finance-data.json
 
 7. Launch dashboard on invoke

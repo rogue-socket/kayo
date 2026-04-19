@@ -24,24 +24,7 @@
       "paymentMethod": "Card"
     }
   ],
-  "income": [
-    {
-      "id": "inc-20260401-001",
-      "date": "2026-04-01",
-      "source": "Salary",
-      "amount": 120000,
-      "currency": "INR",
-      "note": "Monthly salary"
-    },
-    {
-      "id": "inc-20260415-001",
-      "date": "2026-04-15",
-      "source": "Freelance",
-      "amount": 15000,
-      "currency": "INR",
-      "note": "Project payment"
-    }
-  ],
+  "income": [],
   "subscriptions": [
     {
       "id": "sub-001",
