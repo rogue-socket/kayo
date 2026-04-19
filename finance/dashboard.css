@@ -142,6 +142,18 @@ button.ghost {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.secondary {
+  margin-bottom: 14px;
+}
+
+.add-form-panel {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #e6efec;
+  border-radius: 12px;
+  background: #fbfdfc;
+}
+
 .period-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(130px, 1fr));
@@ -168,7 +180,7 @@ select {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 .stats {
@@ -226,6 +238,34 @@ td {
   gap: 10px;
 }
 
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.section-gap {
+  margin-top: 18px;
+}
+
+.section-panel {
+  margin-bottom: 14px;
+}
+
+.muted-box {
+  color: var(--muted);
+  background: #f6faf8;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.sub-item small {
+  display: block;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 .stack {
   display: grid;
   gap: 8px;
@@ -240,6 +280,35 @@ td {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fbfdfc;
+}
+
+.sub-item-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sub-item-actions button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.sub-item-actions .danger {
+  background: #c2410c;
+}
+
+#settingsForm {
+  padding: 12px;
+  border: 1px solid #e6efec;
+  border-radius: 12px;
+  background: #f8fcfb;
+}
+
+.sub-item small {
+  display: block;
+  color: var(--muted);
+  margin-top: 2px;
 }
 
 .ppf-box {
@@ -286,5 +355,17 @@ td {
   .top {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .secondary {
+    width: 100%;
+  }
+
+  .secondary .tab {
+    flex: 1;
+  }
+
+  .form-actions {
+    flex-direction: column;
   }
 }
