@@ -1,5 +1,5 @@
 {
-  "ai-agents": ["ai-agents/2026-04-20-trip-planning-agent-self-grow.md", "ai-agents/2026-04-20-rogue-socket-github-profile.md", "ai-agents/2026-04-20-ai-orchestration.md", "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md"],
+  "ai-agents": ["ai-agents/2026-04-20-trip-planning-agent-self-grow.md", "ai-agents/2026-04-20-rogue-socket-github-profile.md", "ai-agents/2026-04-20-ai-orchestration.md", "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md", "ai-agents/2026-04-21-inference-engineering-print-india.md"],
   "trip-planning": ["ai-agents/2026-04-20-trip-planning-agent-self-grow.md"],
   "self-improving-systems": ["ai-agents/2026-04-20-trip-planning-agent-self-grow.md"],
   "github": ["2026-04-20-github-fake-stars-investigation.md", "ai-agents/2026-04-20-rogue-socket-github-profile.md"],
@@ -31,5 +31,7 @@
   "multi-agent-systems": ["ai-agents/2026-04-20-ai-orchestration.md", "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md", "ai-agents/2026-04-20-ai-orchestration-uipath-enterprise.md", "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md"],
   "enterprise-ai": ["ai-agents/2026-04-20-ai-orchestration-uipath-enterprise.md", "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md"],
   "governance": ["ai-agents/2026-04-20-ai-orchestration-uipath-enterprise.md"],
-  "agentic-ai": ["ai-agents/2026-04-20-ai-orchestration-pega-agentic.md"]
+  "agentic-ai": ["ai-agents/2026-04-20-ai-orchestration-pega-agentic.md"],
+  "ai-education": ["ai-agents/2026-04-21-inference-engineering-print-india.md"],
+  "india-market": ["ai-agents/2026-04-21-inference-engineering-print-india.md"]
 }

@@ -138,7 +138,7 @@
       "type": "article",
       "topics": ["ai-orchestration", "developer-tools", "agent-frameworks"],
       "tags": ["ai-orchestration", "developer-tools", "agent-frameworks", "multi-agent-systems", "tooling"],
-      "connections": ["ai-agents/2026-04-20-ai-orchestration.md", "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md", "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md", "ai-agents/2026-04-20-rogue-socket-github-profile.md"],
+      "connections": ["ai-agents/2026-04-20-ai-orchestration.md", "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md", "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md", "ai-agents/2026-04-20-rogue-socket-github-profile.md", "ai-agents/2026-04-21-inference-engineering-print-india.md"],
       "captured_at": "2026-04-20",
       "summary_short": "Comprehensive AI orchestration tool landscape: engineer tools (LangChain, CrewAI, AutoGen, Akka) vs data science tools (Airflow, Kubeflow). AI orchestration vs ML orchestration distinction.",
       "deferred": false
@@ -154,6 +154,19 @@
       "connections": ["2026-04-20-github-fake-stars-investigation.md"],
       "captured_at": "2026-04-20",
       "summary_short": "Nginx logs separate provider fetches from AI referral clicks and show why Google/Gemini attribution is structurally ambiguous.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260421-001",
+      "title": "Inference Engineering Print Edition Launch in India",
+      "filename": "ai-agents/2026-04-21-inference-engineering-print-india.md",
+      "source": "https://x.com/i/status/2045005872292913179",
+      "type": "tweet",
+      "topics": ["ai-agents", "ai-education", "india-market"],
+      "tags": ["ai-agents", "ai-education", "india-market", "inference-engineering", "book-release"],
+      "connections": ["ai-agents/2026-04-20-ai-orchestration-tools-landscape.md"],
+      "captured_at": "2026-04-21",
+      "summary_short": "Philip Kiely launched Inference Engineering print edition in India at Rs825, positioned as a 65% discount.",
       "deferred": false
     }
   ]

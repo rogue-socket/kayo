@@ -65,6 +65,7 @@ A comprehensive landscape of AI orchestration tools, split by audience (software
 - [[2026-04-20-ai-orchestration-zapier-guide.md]] — Zapier's practical approach (higher-level, less developer-focused)
 - [[2026-04-20-ai-orchestration-pega-agentic.md]] — Pega's agentic evolution; these tools are what implement that evolution
 - [[2026-04-20-rogue-socket-github-profile.md]] — Yash's frameworks (closedclaw, ForrestRun) sit in this landscape
+- [[2026-04-21-inference-engineering-print-india.md]] — inference engineering learning resource relevant to implementing production LLM systems.
 
 ## Questions
 - Where do closedclaw and ForrestRun fit in this landscape — are they LangChain-level (chaining) or CrewAI-level (multi-agent teams)?
