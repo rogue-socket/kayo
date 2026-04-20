@@ -1,0 +1,55 @@
+{
+  "cluster": "ai-agents",
+  "description": "AI agents, orchestration frameworks, multi-agent systems, and related projects",
+  "entries": [
+    {
+      "id": "kb-20260420-001",
+      "title": "Trip Planning Agent That Can Self-Grow",
+      "filename": "2026-04-20-trip-planning-agent-self-grow.md",
+      "topics": ["ai-agents", "trip-planning", "self-improving-systems"],
+      "connections": ["2026-04-20-rogue-socket-github-profile.md"]
+    },
+    {
+      "id": "kb-20260420-006",
+      "title": "Rogue-Socket GitHub Profile — Yash Agrawal's Portfolio",
+      "filename": "2026-04-20-rogue-socket-github-profile.md",
+      "topics": ["ai-agents", "portfolio", "agent-frameworks", "digital-twins"],
+      "connections": ["2026-04-20-trip-planning-agent-self-grow.md", "../2026-04-20-github-fake-stars-investigation.md", "../2026-04-20-trusteando-protocol.md"]
+    },
+    {
+      "id": "kb-20260420-007",
+      "title": "AI Orchestration",
+      "filename": "2026-04-20-ai-orchestration.md",
+      "topics": ["ai-orchestration", "ai-agents", "systems-design"],
+      "connections": ["2026-04-20-trip-planning-agent-self-grow.md", "2026-04-20-rogue-socket-github-profile.md", "2026-04-20-ai-orchestration-zapier-guide.md"]
+    },
+    {
+      "id": "kb-20260420-008",
+      "title": "AI Orchestration — Zapier's Practical Guide",
+      "filename": "2026-04-20-ai-orchestration-zapier-guide.md",
+      "topics": ["ai-orchestration", "workflow-automation", "ai-agents"],
+      "connections": ["2026-04-20-ai-orchestration.md", "2026-04-20-trip-planning-agent-self-grow.md", "2026-04-20-rogue-socket-github-profile.md"]
+    },
+    {
+      "id": "kb-20260420-009",
+      "title": "AI Orchestration — UiPath's Enterprise Perspective",
+      "filename": "2026-04-20-ai-orchestration-uipath-enterprise.md",
+      "topics": ["ai-orchestration", "enterprise-ai", "governance"],
+      "connections": ["2026-04-20-ai-orchestration.md", "2026-04-20-ai-orchestration-zapier-guide.md", "2026-04-20-rogue-socket-github-profile.md"]
+    },
+    {
+      "id": "kb-20260420-010",
+      "title": "AI Orchestration — Pega's Agentic Evolution",
+      "filename": "2026-04-20-ai-orchestration-pega-agentic.md",
+      "topics": ["ai-orchestration", "agentic-ai", "enterprise-ai"],
+      "connections": ["2026-04-20-ai-orchestration.md", "2026-04-20-ai-orchestration-zapier-guide.md", "2026-04-20-ai-orchestration-uipath-enterprise.md", "2026-04-20-trip-planning-agent-self-grow.md"]
+    },
+    {
+      "id": "kb-20260420-011",
+      "title": "AI Orchestration Tools Landscape",
+      "filename": "2026-04-20-ai-orchestration-tools-landscape.md",
+      "topics": ["ai-orchestration", "developer-tools", "agent-frameworks"],
+      "connections": ["2026-04-20-ai-orchestration.md", "2026-04-20-ai-orchestration-zapier-guide.md", "2026-04-20-ai-orchestration-pega-agentic.md", "2026-04-20-rogue-socket-github-profile.md"]
+    }
+  ]
+}
