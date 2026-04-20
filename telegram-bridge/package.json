@@ -1,0 +1,15 @@
+{
+  "name": "kayo-telegram-bridge",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Telegram ingress and local Copilot gateway for this repo.",
+  "scripts": {
+    "start": "node start-all.js",
+    "start:gateway": "node gateway.js",
+    "start:telegram": "node bridge.js",
+    "check": "node --check gateway.js && node --check bridge.js && node --check start-all.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
