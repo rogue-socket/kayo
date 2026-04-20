@@ -21,7 +21,7 @@
       "type": "article",
       "topics": ["github", "open-source", "vc-funding", "metrics-manipulation", "developer-tools"],
       "tags": ["github", "fake-stars", "open-source", "developer-tools", "vc-funding", "astroturfing", "metrics-manipulation"],
-      "connections": ["ai-agents/2026-04-20-rogue-socket-github-profile.md"],
+      "connections": ["ai-agents/2026-04-20-rogue-socket-github-profile.md", "2026-04-20-nginx-logs-ai-traffic-vs-referral-traffic.md"],
       "captured_at": "2026-04-20",
       "summary_short": "CMU study found 6M fake GitHub stars across 18K repos. Stars sell for $0.03-$0.85 each and VCs use them as sourcing signals, creating a professionalized manipulation economy.",
       "deferred": false
@@ -141,6 +141,19 @@
       "connections": ["ai-agents/2026-04-20-ai-orchestration.md", "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md", "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md", "ai-agents/2026-04-20-rogue-socket-github-profile.md"],
       "captured_at": "2026-04-20",
       "summary_short": "Comprehensive AI orchestration tool landscape: engineer tools (LangChain, CrewAI, AutoGen, Akka) vs data science tools (Airflow, Kubeflow). AI orchestration vs ML orchestration distinction.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260420-012",
+      "title": "What nginx logs prove about AI traffic vs referral traffic",
+      "filename": "2026-04-20-nginx-logs-ai-traffic-vs-referral-traffic.md",
+      "source": "https://surfacedby.com/blog/nginx-logs-ai-traffic-vs-referral-traffic",
+      "type": "article",
+      "topics": ["ai-crawlers", "web-analytics", "metrics-manipulation"],
+      "tags": ["ai-crawlers", "web-analytics", "llm-traffic", "referral-traffic", "metrics-manipulation"],
+      "connections": ["2026-04-20-github-fake-stars-investigation.md"],
+      "captured_at": "2026-04-20",
+      "summary_short": "Nginx logs separate provider fetches from AI referral clicks and show why Google/Gemini attribution is structurally ambiguous.",
       "deferred": false
     }
   ]
