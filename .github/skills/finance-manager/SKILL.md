@@ -7,6 +7,7 @@ When the user asks to track or review money, use this process
 
 1. Data source
 - Use finance/finance-data.json as the source of truth
+- Browser local storage is scratch state for the dashboard UI; durable repo-side updates must land in finance/finance-data.json
 - Keep keys stable so future edits remain compatible with the dashboard
 - Preserve existing records unless the user explicitly asks to delete or rewrite
 
@@ -41,7 +42,7 @@ When the user asks to track or review money, use this process
 - If user asks for a period report, compute totals for day, week, month, or year
 - Include total income, total expenses, net savings, and top categories when possible
 - Always provide an analysis of the user's finances, not just raw numbers
-- If the dashboard UI exists or is relevant to the request, include the full /dashboard.html localhost link as a companion to the analysis
+- If the user asks for analysis or a period report, give the analysis first and include the full /dashboard.html localhost link only as a companion when it is useful
 - For PPF:
   - show contribution total for requested year
   - show done/not done against annualDepositTarget
@@ -56,7 +57,8 @@ When the user asks to track or review money, use this process
 - If the user asks to permanently save dashboard-entered sample entries, sync those entries back into finance/finance-data.json
 
 7. Launch dashboard on invoke
-- If the user asks to open or launch the finance UI, run finance/run-dashboard.sh
-- Return only the full dashboard URL with no extra text when requested
+- Prefer finance/run-dashboard.sh when the current shell can execute it
+- If the current platform cannot run that script directly, start an equivalent local static server from finance/ and return the same dashboard URL
+- When the user explicitly asks to open or launch the finance UI, return only the full dashboard URL with no extra text
 - Always return a URL ending in /dashboard.html, never a bare localhost root
 - Use localhost only (127.0.0.1), never a public or remote URL
