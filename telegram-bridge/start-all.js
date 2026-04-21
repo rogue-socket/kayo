@@ -39,6 +39,7 @@ function startProcess(label, scriptName) {
 
 startProcess('gateway', 'gateway.js');
 startProcess('telegram bridge', 'bridge.js');
+startProcess('scheduler', 'scheduler.js');
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
