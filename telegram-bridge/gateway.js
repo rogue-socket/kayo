@@ -1,45 +1,15 @@
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
-const { spawn, spawnSync } = require('node:child_process');
 
-const BRIDGE_DIR = __dirname;
-const REPO_ROOT = path.resolve(BRIDGE_DIR, '..');
-const ENV_PATH = path.join(BRIDGE_DIR, '.env');
-const STATE_DIR = path.join(BRIDGE_DIR, 'runtime');
-const SESSIONS_DIR = path.join(STATE_DIR, 'sessions');
+const { loadConfig } = require('./lib/env');
+const { resolveCommand, runCopilot } = require('./lib/copilot-cli');
 
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return;
-  }
-
-  const content = fs.readFileSync(filePath, 'utf8');
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) {
-      continue;
-    }
-
-    const equalsIndex = line.indexOf('=');
-    if (equalsIndex === -1) {
-      continue;
-    }
-
-    const key = line.slice(0, equalsIndex).trim();
-    let value = line.slice(equalsIndex + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-
-    if (!(key in process.env)) {
-      process.env[key] = value;
-    }
-  }
-}
+const config = loadConfig();
+const resolvedCopilotBin = resolveCommand(config.copilotBin);
 
 function ensureStateDirs() {
-  fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+  fs.mkdirSync(config.sessionsDir, { recursive: true });
 }
 
 function sanitizeSessionId(value) {
@@ -47,7 +17,7 @@ function sanitizeSessionId(value) {
 }
 
 function sessionFilePath(sessionId) {
-  return path.join(SESSIONS_DIR, `${sanitizeSessionId(sessionId)}.json`);
+  return path.join(config.sessionsDir, `${sanitizeSessionId(sessionId)}.json`);
 }
 
 function loadSession(sessionId) {
@@ -63,9 +33,9 @@ function loadSession(sessionId) {
   }
 }
 
-function saveSession(session, maxTurns) {
+function saveSession(session) {
   ensureStateDirs();
-  const trimmedMessages = session.messages.slice(-(maxTurns * 2));
+  const trimmedMessages = session.messages.slice(-(config.copilotHistoryTurns * 2));
   fs.writeFileSync(
     sessionFilePath(session.sessionId),
     JSON.stringify(
@@ -87,17 +57,18 @@ function resetSession(sessionId) {
   }
 }
 
-function trimHistory(messages, maxTurns, maxChars) {
-  const recent = messages.slice(-(maxTurns * 2));
+function trimHistory(messages) {
+  const recent = messages.slice(-(config.copilotHistoryTurns * 2));
   const kept = [];
   let usedChars = 0;
 
   for (let index = recent.length - 1; index >= 0; index -= 1) {
     const entry = recent[index];
     const serialized = `${entry.role}: ${entry.content}`;
-    if (kept.length > 0 && usedChars + serialized.length > maxChars) {
+    if (kept.length > 0 && usedChars + serialized.length > config.copilotHistoryChars) {
       break;
     }
+
     kept.unshift(entry);
     usedChars += serialized.length;
   }
@@ -105,159 +76,48 @@ function trimHistory(messages, maxTurns, maxChars) {
   return kept;
 }
 
-function buildPromptEnvelope(sessionMessages, prompt, maxTurns, maxChars) {
+function formatRequestContext(sessionId, requestContext) {
+  const lines = [`session_id: ${sessionId}`];
+  if (!requestContext || typeof requestContext !== 'object') {
+    return lines.join('\n');
+  }
+
+  for (const [key, value] of Object.entries(requestContext)) {
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+
+    lines.push(`${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`);
+  }
+
+  return lines.join('\n');
+}
+
+function buildPromptEnvelope(sessionId, sessionMessages, prompt, requestContext) {
   const cleanedPrompt = prompt.replace(/\r\n/g, '\n').trim();
-  const history = trimHistory(sessionMessages, maxTurns, maxChars);
-
-  if (history.length === 0) {
-    return cleanedPrompt;
-  }
-
-  const transcript = history
-    .map((entry) => `${entry.role === 'assistant' ? 'Assistant' : 'User'}: ${entry.content}`)
-    .join('\n\n');
-
-  return [
+  const history = trimHistory(sessionMessages);
+  const sections = [
     'Continue this conversation using the repository instructions, skills, and tools available in the current workspace.',
+    'Treat the request context block as authoritative metadata from the caller.',
     'Use the prior exchange only as context. Answer the current user message directly.',
-    'Recent conversation:',
-    transcript,
-    'Current user message:',
-    cleanedPrompt
-  ].join('\n\n');
-}
+    'Request context:',
+    formatRequestContext(sessionId, requestContext)
+  ];
 
-function buildPermissionArgs(mode) {
-  if (mode === 'yolo') {
-    return ['--yolo'];
+  if (requestContext && requestContext.channel === 'telegram' && requestContext.telegram_chat_id) {
+    sections.push('If the user asks to create a scheduled workflow and does not specify a delivery target, default Telegram delivery to telegram_chat_id from the request context.');
   }
 
-  return ['--allow-all-tools', '--allow-all-paths', '--no-ask-user'];
-}
+  if (history.length > 0) {
+    const transcript = history
+      .map((entry) => `${entry.role === 'assistant' ? 'Assistant' : 'User'}: ${entry.content}`)
+      .join('\n\n');
 
-function resolveCommand(command) {
-  if (path.isAbsolute(command) || command.includes(path.sep)) {
-    return command;
+    sections.push('Recent conversation:', transcript);
   }
 
-  if (process.platform !== 'win32') {
-    return command;
-  }
-
-  try {
-    const result = spawnSync('where.exe', [command], {
-      encoding: 'utf8',
-      shell: false
-    });
-
-    if (result.status !== 0 || !result.stdout) {
-      return command;
-    }
-
-    const candidates = result.stdout
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    return candidates.find((line) => line.toLowerCase().endsWith('.cmd')) || candidates[0] || command;
-  } catch {
-    return command;
-  }
-}
-
-function resolveLaunch(command) {
-  if (process.platform === 'win32' && /copilot\.cmd$/i.test(command)) {
-    const loaderPath = path.join(path.dirname(command), 'node_modules', '@github', 'copilot', 'npm-loader.js');
-    if (fs.existsSync(loaderPath)) {
-      return {
-        command: process.execPath,
-        prefixArgs: [loaderPath],
-        shell: false
-      };
-    }
-  }
-
-  return {
-    command,
-    prefixArgs: [],
-    shell: process.platform === 'win32' && /\.(cmd|bat)$/i.test(command)
-  };
-}
-
-function runCopilot(prompt, options) {
-  const launch = resolveLaunch(options.copilotBin);
-  const args = [...launch.prefixArgs, '-p', prompt, '-s', '--output-format', 'text', '--stream', 'off'];
-
-  if (options.model) {
-    args.push('--model', options.model);
-  }
-
-  args.push(...buildPermissionArgs(options.permissionMode));
-
-  return new Promise((resolve, reject) => {
-    const child = spawn(launch.command, args, {
-      cwd: REPO_ROOT,
-      env: process.env,
-      shell: launch.shell,
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-
-    let stdout = '';
-    let stderr = '';
-    let settled = false;
-
-    const finish = (callback, value) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      callback(value);
-    };
-
-    const timeoutHandle = setTimeout(() => {
-      child.kill();
-      finish(reject, new Error(`Copilot timed out after ${options.timeoutMs}ms.`));
-    }, options.timeoutMs);
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on('error', (error) => {
-      clearTimeout(timeoutHandle);
-      finish(reject, new Error(`Failed to start Copilot: ${error.message}`));
-    });
-
-    child.on('close', (code, signal) => {
-      clearTimeout(timeoutHandle);
-      const cleanedStdout = stdout.trim();
-      const cleanedStderr = stderr.trim();
-
-      if (code === 0) {
-        finish(resolve, cleanedStdout || cleanedStderr || 'No output.');
-        return;
-      }
-
-      const parts = ['Copilot command failed.'];
-      if (code !== null) {
-        parts.push(`Exit code: ${code}`);
-      }
-      if (signal) {
-        parts.push(`Signal: ${signal}`);
-      }
-      if (cleanedStdout) {
-        parts.push('', 'stdout:', cleanedStdout);
-      }
-      if (cleanedStderr) {
-        parts.push('', 'stderr:', cleanedStderr);
-      }
-      finish(reject, new Error(parts.join('\n')));
-    });
-  });
+  sections.push('Current user message:', cleanedPrompt);
+  return sections.join('\n\n');
 }
 
 function readJsonBody(req) {
@@ -296,37 +156,23 @@ function writeJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
-readEnvFile(ENV_PATH);
-ensureStateDirs();
-
-const gatewayHost = process.env.GATEWAY_HOST || '127.0.0.1';
-const gatewayPort = Number(process.env.GATEWAY_PORT || 8787);
-const gatewaySharedToken = process.env.GATEWAY_SHARED_TOKEN || '';
-const copilotBin = process.env.COPILOT_BIN || 'copilot';
-const resolvedCopilotBin = resolveCommand(copilotBin);
-const copilotTimeoutMs = Number(process.env.COPILOT_TIMEOUT_MS || 600000);
-const copilotHistoryTurns = Number(process.env.COPILOT_HISTORY_TURNS || 6);
-const copilotHistoryChars = Number(process.env.COPILOT_HISTORY_CHARS || 6000);
-const copilotPermissionMode = process.env.COPILOT_PERMISSION_MODE || 'tools';
-const copilotModel = (process.env.COPILOT_MODEL || '').trim();
-
 let activeJob = null;
 let queuedJobs = 0;
 let queueTail = Promise.resolve();
 
 function assertAuthorized(req) {
-  if (!gatewaySharedToken) {
+  if (!config.gatewaySharedToken) {
     return;
   }
 
-  if (req.headers['x-gateway-token'] !== gatewaySharedToken) {
+  if (req.headers['x-gateway-token'] !== config.gatewaySharedToken) {
     const error = new Error('Unauthorized gateway request.');
     error.statusCode = 401;
     throw error;
   }
 }
 
-function enqueuePrompt(sessionId, prompt) {
+function enqueuePrompt(sessionId, prompt, requestContext) {
   queuedJobs += 1;
 
   const run = async () => {
@@ -338,17 +184,12 @@ function enqueuePrompt(sessionId, prompt) {
 
     try {
       const session = loadSession(sessionId);
-      const envelopedPrompt = buildPromptEnvelope(
-        session.messages || [],
-        prompt,
-        copilotHistoryTurns,
-        copilotHistoryChars
-      );
+      const envelopedPrompt = buildPromptEnvelope(sessionId, session.messages || [], prompt, requestContext);
       const reply = await runCopilot(envelopedPrompt, {
         copilotBin: resolvedCopilotBin,
-        timeoutMs: copilotTimeoutMs,
-        permissionMode: copilotPermissionMode,
-        model: copilotModel
+        timeoutMs: config.copilotTimeoutMs,
+        permissionMode: config.copilotPermissionMode,
+        model: config.copilotModel
       });
 
       session.messages = [
@@ -356,7 +197,7 @@ function enqueuePrompt(sessionId, prompt) {
         { role: 'user', content: prompt.trim(), createdAt: new Date().toISOString() },
         { role: 'assistant', content: reply, createdAt: new Date().toISOString() }
       ];
-      saveSession(session, copilotHistoryTurns);
+      saveSession(session);
 
       return reply;
     } finally {
@@ -369,6 +210,8 @@ function enqueuePrompt(sessionId, prompt) {
   return resultPromise;
 }
 
+ensureStateDirs();
+
 const server = http.createServer(async (req, res) => {
   try {
     assertAuthorized(req);
@@ -378,9 +221,9 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         queuedJobs,
         active: activeJob,
-        repoRoot: REPO_ROOT,
+        repoRoot: config.repoRoot,
         copilotBin: resolvedCopilotBin,
-        permissionMode: copilotPermissionMode
+        permissionMode: config.copilotPermissionMode
       });
       return;
     }
@@ -401,6 +244,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const sessionId = body.sessionId ? String(body.sessionId) : '';
       const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
+      const requestContext = body.context && typeof body.context === 'object' ? body.context : {};
 
       if (!sessionId) {
         writeJson(res, 400, { error: 'sessionId is required.' });
@@ -413,7 +257,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const startedAt = Date.now();
-      const reply = await enqueuePrompt(sessionId, prompt);
+      const reply = await enqueuePrompt(sessionId, prompt, requestContext);
       writeJson(res, 200, {
         ok: true,
         sessionId,
@@ -431,9 +275,9 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(gatewayPort, gatewayHost, () => {
-  console.log(`Copilot gateway listening on http://${gatewayHost}:${gatewayPort}`);
-  console.log(`Repo root: ${REPO_ROOT}`);
+server.listen(config.gatewayPort, config.gatewayHost, () => {
+  console.log(`Copilot gateway listening on http://${config.gatewayHost}:${config.gatewayPort}`);
+  console.log(`Repo root: ${config.repoRoot}`);
   console.log(`Copilot binary: ${resolvedCopilotBin}`);
-  console.log(`Permission mode: ${copilotPermissionMode}`);
-});
+  console.log(`Permission mode: ${config.copilotPermissionMode}`);
+});

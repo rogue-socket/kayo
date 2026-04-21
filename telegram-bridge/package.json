@@ -3,11 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "description": "Telegram ingress and local Copilot gateway for this repo.",
+  "dependencies": {
+    "cron-parser": "^5.2.0",
+    "luxon": "^3.7.1"
+  },
   "scripts": {
+    "setup": "node setup.js",
     "start": "node start-all.js",
     "start:gateway": "node gateway.js",
+    "start:scheduler": "node scheduler.js",
     "start:telegram": "node bridge.js",
-    "check": "node --check gateway.js && node --check bridge.js && node --check start-all.js"
+    "check": "node --check lib/env.js && node --check lib/copilot-cli.js && node --check lib/file-access.js && node --check lib/transport/gateway-client.js && node --check lib/transport/telegram-api.js && node --check lib/scheduler/job-store.js && node --check lib/scheduler/schedule-parser.js && node --check lib/scheduler/workflow-runner.js && node --check gateway.js && node --check bridge.js && node --check scheduler.js && node --check setup.js && node --check start-all.js"
   },
   "engines": {
     "node": ">=18"
