@@ -65,12 +65,28 @@ function splitList(value) {
 }
 
 function parseAllowedChatIds(value) {
-  return new Set(splitList(value));
+  const normalized = String(value || '')
+    .replace(/[;,]/g, '\n')
+    .split(/\r?\n/)
+    .flatMap((chunk) => chunk.trim().split(/\s+/))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return new Set(normalized);
 }
 
 function coerceNumber(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseCopilotContextMode(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'native-session') {
+    return 'native-session';
+  }
+
+  return 'bridge-history';
 }
 
 function resolveConfiguredPath(rawPath) {
@@ -154,6 +170,7 @@ function loadConfig() {
     copilotTimeoutMs: coerceNumber(process.env.COPILOT_TIMEOUT_MS, 600000),
     copilotHistoryTurns: coerceNumber(process.env.COPILOT_HISTORY_TURNS, 6),
     copilotHistoryChars: coerceNumber(process.env.COPILOT_HISTORY_CHARS, 6000),
+    copilotContextMode: parseCopilotContextMode(process.env.COPILOT_CONTEXT_MODE),
     copilotPermissionMode: 'yolo',
     copilotModel: (process.env.COPILOT_MODEL || '').trim(),
     fileRoots: parseFileRootEntries(process.env.FILE_ACCESS_ROOTS),
@@ -180,4 +197,4 @@ module.exports = {
   readEnvFile,
   resolveConfiguredPath,
   splitList
-};
+};
