@@ -37,6 +37,7 @@ function buildEnvContent(values) {
     `COPILOT_TIMEOUT_MS=${values.copilotTimeoutMs}`,
     `COPILOT_HISTORY_TURNS=${values.copilotHistoryTurns}`,
     `COPILOT_HISTORY_CHARS=${values.copilotHistoryChars}`,
+    `COPILOT_CONTEXT_MODE=${values.copilotContextMode}`,
     'COPILOT_PERMISSION_MODE=yolo',
     `COPILOT_MODEL=${values.copilotModel}`,
     `FILE_ACCESS_ROOTS=${values.fileAccessRoots}`,
@@ -130,7 +131,7 @@ async function main() {
       required: true,
       defaultValue: existingEnv.TELEGRAM_BOT_TOKEN || ''
     });
-    const telegramAllowedChatIds = await promptValue(rl, 'Allowed Telegram chat IDs (comma-separated)', {
+    const telegramAllowedChatIds = await promptValue(rl, 'Allowed Telegram chat IDs (comma/space/newline-separated)', {
       required: true,
       defaultValue: existingEnv.TELEGRAM_ALLOWED_CHAT_IDS || ''
     });
@@ -158,6 +159,7 @@ async function main() {
       copilotTimeoutMs: existingEnv.COPILOT_TIMEOUT_MS || '600000',
       copilotHistoryTurns: existingEnv.COPILOT_HISTORY_TURNS || '6',
       copilotHistoryChars: existingEnv.COPILOT_HISTORY_CHARS || '6000',
+      copilotContextMode: existingEnv.COPILOT_CONTEXT_MODE || 'native-session',
       copilotModel: existingEnv.COPILOT_MODEL || '',
       fileAccessRoots,
       fileAccessMaxBytes: existingEnv.FILE_ACCESS_MAX_BYTES || '20971520',
@@ -196,4 +198,4 @@ async function main() {
 main().catch((error) => {
   console.error(error.message || error);
   process.exitCode = 1;
-});
+});
