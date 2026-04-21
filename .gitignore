@@ -1,2 +1,3 @@
 telegram-bridge/.env
 telegram-bridge/runtime/
+*/node_modules/*
