@@ -49,7 +49,7 @@ Capture must feel frictionless. Accept whatever the user gives, ask only if the 
 ### Graceful failure for unknown content
 - If content arrives in a format or from a source not handled above, do NOT error out or refuse.
 - Store whatever metadata and raw text is available, set `type` to `other`, and mark `"classification": "unrecognized"`.
-- Mention to Yash that the type was unrecognized so he's aware, but still complete the capture. Don't block on reclassification.
+- Mention to Yash that the type was unrecognized so he's aware, but still complete the capture. Only ask about defining a new type if that would materially improve future captures.
 - The system should always prefer partial capture over no capture.
 
 ## 3. Normalization
@@ -228,7 +228,7 @@ Rules:
 - IDs are deterministic: `kb-YYYYMMDD-###` where ### is a zero-padded sequence for that day
 - Keep `summary_short` under 150 characters
 - `connections` stores filenames of related notes (bidirectional: update the connected note's entry too)
-- After adding a new entry, scan existing entries for topic overlap and add connections directly
+- After adding a new entry, scan existing entries for topic overlap and add connections directly, then mention the important ones in the response
 - For `#watch-later` / `#save` items, set `"deferred": true` — these are queued for full processing later
 
 ## 8. Retrieval
