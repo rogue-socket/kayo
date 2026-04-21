@@ -21,7 +21,7 @@ Scheduler -> workflow-runner.js -> localhost gateway.js -> copilot -p
 - Restricts access to specific Telegram chat IDs.
 - Routes all prompts through one local gateway backed by `copilot -p`.
 - Executes `copilot` inside this repo, so repo instructions and skills apply on every request.
-- Persists a short per-chat conversation history for continuity.
+- Supports two context modes: bridge-managed history or native Copilot session resume.
 - Persists the Telegram update offset so restarts do not replay old messages.
 - Persists scheduled jobs under `runtime/jobs.json`.
 - Serializes prompt execution through one gateway queue so concurrent repo edits do not fight each other.
@@ -95,11 +95,38 @@ npm run start:scheduler
 - `/help`
 - `/status`
 - `/reset`
+- `/session new`
+- `/session list`
+- `/sessions`
+- `/session current`
+- `/session use <session-id|default>`
 - `/files roots`
 - `/files ls <alias:/path>`
 - `/file send <alias:/path>`
 
 Any other text message is forwarded as a prompt.
+
+### Session behavior
+
+- Each chat keeps an active session ID for prompt routing.
+- By default, the active session starts as the chat ID itself.
+- Use `/session new` to create and switch to a fresh session.
+- Use `/session list` to see known sessions for the current chat.
+- Use `/session use <session-id|default>` to switch back and forth.
+- `/reset` clears context for the active session.
+
+### Context modes
+
+- `COPILOT_CONTEXT_MODE=bridge-history`:
+	- Gateway stores short transcript files in `runtime/sessions/`.
+	- Gateway prepends recent conversation to each `copilot -p` call.
+	- `COPILOT_HISTORY_TURNS` and `COPILOT_HISTORY_CHARS` apply.
+- `COPILOT_CONTEXT_MODE=native-session`:
+	- Each logical Telegram session maps to a real Copilot UUID session.
+	- Gateway calls `copilot -p --resume=<uuid>` for continuity.
+	- Bridge transcript injection is disabled to avoid duplicate context.
+	- `/session list` shows logical session IDs and mapped Copilot UUIDs.
+	- `/reset` rotates the mapped Copilot UUID for a fresh context.
 
 ## File access
 
@@ -133,6 +160,8 @@ The scheduler currently supports workflows of kind `copilot-prompt` and Telegram
 ## Environment notes
 
 - `COPILOT_PERMISSION_MODE` is fixed to `yolo`.
+- `COPILOT_CONTEXT_MODE` controls context source: `bridge-history` or `native-session`.
+- `TELEGRAM_ALLOWED_CHAT_IDS` supports comma, space, semicolon, or newline-separated chat IDs.
 - `DEFAULT_TIMEZONE` controls the fallback timezone for scheduled jobs.
 - `FILE_ACCESS_MAX_BYTES` controls the largest file the bridge will send over Telegram.
 - `SCHEDULER_POLL_INTERVAL_MS` controls how often the scheduler checks due jobs.
