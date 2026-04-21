@@ -83,6 +83,10 @@ function runCopilot(prompt, options) {
   const launch = resolveLaunch(options.copilotBin);
   const args = [...launch.prefixArgs, '-p', prompt, '-s', '--output-format', 'text', '--stream', 'off'];
 
+  if (options.resumeSessionId) {
+    args.push(`--resume=${options.resumeSessionId}`);
+  }
+
   if (options.model) {
     args.push('--model', options.model);
   }
@@ -163,4 +167,4 @@ module.exports = {
   resolveCommand,
   resolveLaunch,
   runCopilot
-};
+};

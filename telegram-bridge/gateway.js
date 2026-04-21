@@ -93,9 +93,9 @@ function formatRequestContext(sessionId, requestContext) {
   return lines.join('\n');
 }
 
-function buildPromptEnvelope(sessionId, sessionMessages, prompt, requestContext) {
+function buildPromptEnvelope(sessionId, sessionMessages, prompt, requestContext, includeHistory) {
   const cleanedPrompt = prompt.replace(/\r\n/g, '\n').trim();
-  const history = trimHistory(sessionMessages);
+  const history = includeHistory ? trimHistory(sessionMessages) : [];
   const sections = [
     'Continue this conversation using the repository instructions, skills, and tools available in the current workspace.',
     'Treat the request context block as authoritative metadata from the caller.',
@@ -183,21 +183,31 @@ function enqueuePrompt(sessionId, prompt, requestContext) {
     };
 
     try {
-      const session = loadSession(sessionId);
-      const envelopedPrompt = buildPromptEnvelope(sessionId, session.messages || [], prompt, requestContext);
+      const nativeSessionMode = config.copilotContextMode === 'native-session';
+      const session = nativeSessionMode ? { sessionId: String(sessionId), messages: [] } : loadSession(sessionId);
+      const envelopedPrompt = buildPromptEnvelope(
+        sessionId,
+        session.messages || [],
+        prompt,
+        requestContext,
+        !nativeSessionMode
+      );
       const reply = await runCopilot(envelopedPrompt, {
         copilotBin: resolvedCopilotBin,
         timeoutMs: config.copilotTimeoutMs,
         permissionMode: config.copilotPermissionMode,
-        model: config.copilotModel
+        model: config.copilotModel,
+        resumeSessionId: nativeSessionMode ? String(sessionId) : ''
       });
 
-      session.messages = [
-        ...(session.messages || []),
-        { role: 'user', content: prompt.trim(), createdAt: new Date().toISOString() },
-        { role: 'assistant', content: reply, createdAt: new Date().toISOString() }
-      ];
-      saveSession(session);
+      if (!nativeSessionMode) {
+        session.messages = [
+          ...(session.messages || []),
+          { role: 'user', content: prompt.trim(), createdAt: new Date().toISOString() },
+          { role: 'assistant', content: reply, createdAt: new Date().toISOString() }
+        ];
+        saveSession(session);
+      }
 
       return reply;
     } finally {
@@ -280,4 +290,4 @@ server.listen(config.gatewayPort, config.gatewayHost, () => {
   console.log(`Repo root: ${config.repoRoot}`);
   console.log(`Copilot binary: ${resolvedCopilotBin}`);
   console.log(`Permission mode: ${config.copilotPermissionMode}`);
-});
+});
