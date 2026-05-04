@@ -176,7 +176,17 @@ function loadConfig() {
     fileRoots: parseFileRootEntries(process.env.FILE_ACCESS_ROOTS),
     fileAccessMaxBytes: coerceNumber(process.env.FILE_ACCESS_MAX_BYTES, 20 * 1024 * 1024),
     defaultTimezone: (process.env.DEFAULT_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC').trim(),
-    schedulerPollIntervalMs: Math.max(1000, coerceNumber(process.env.SCHEDULER_POLL_INTERVAL_MS, 15000))
+    schedulerPollIntervalMs: Math.max(1000, coerceNumber(process.env.SCHEDULER_POLL_INTERVAL_MS, 15000)),
+    healthProbe: {
+      enabled: (process.env.HEALTH_PROBE_ENABLED || 'true').toLowerCase() !== 'false',
+      tier1IntervalMs: Math.max(60_000, coerceNumber(process.env.HEALTH_PROBE_TIER1_INTERVAL_MS, 30 * 60 * 1000)),
+      tier2IntervalMs: coerceNumber(process.env.HEALTH_PROBE_TIER2_INTERVAL_MS, 6 * 60 * 60 * 1000),
+      bridgeStaleMs: Math.max(60_000, coerceNumber(process.env.HEALTH_PROBE_BRIDGE_STALE_MS, 60 * 60 * 1000)),
+      alertCooldownMs: Math.max(60_000, coerceNumber(process.env.HEALTH_PROBE_ALERT_COOLDOWN_MS, 12 * 60 * 60 * 1000)),
+      alertChatId: (process.env.HEALTH_PROBE_ALERT_CHAT_ID || '').trim(),
+      statePath: path.join(STATE_DIR, 'health-probe.json'),
+      sessionId: 'health-probe'
+    }
   };
 }
 
