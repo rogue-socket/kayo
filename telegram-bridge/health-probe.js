@@ -81,6 +81,12 @@ function saveState(state) {
   fs.writeFileSync(probeConfig.statePath, JSON.stringify(state, null, 2));
 }
 
+function summarizeError(message) {
+  const text = String(message || 'unknown');
+  const firstLine = text.split('\n').map((l) => l.trim()).find((l) => l.length > 0) || 'unknown';
+  return firstLine.length > 160 ? `${firstLine.slice(0, 157)}...` : firstLine;
+}
+
 function classifyError(message) {
   const text = String(message || '').toLowerCase();
   if (/no authentication information|unauthorized|\b401\b/.test(text)) return 'auth';
@@ -139,7 +145,7 @@ async function maybeAlert(state, cls, errorMessage, lastOkAt) {
 
   const lines = [
     `🚨 kayo health probe: ${cls}`,
-    `Error: ${(errorMessage || 'unknown').toString().slice(0, 200)}`,
+    `Error: ${summarizeError(errorMessage)}`,
     `Suggested: ${suggestionFor(cls)}`,
     `Last successful probe: ${lastOkAt ? `${lastOkAt} (${formatRelative(lastOkAt)})` : 'never'}.`
   ];
