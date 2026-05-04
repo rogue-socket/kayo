@@ -39,7 +39,15 @@ async function telegramRequest(token, method, payload, options = {}) {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Telegram API ${method} failed with ${response.status}: ${body}`);
+    const error = new Error(`Telegram API ${method} failed with ${response.status}: ${body}`);
+    error.statusCode = response.status;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && parsed.parameters && typeof parsed.parameters.retry_after === 'number') {
+        error.retryAfter = parsed.parameters.retry_after;
+      }
+    } catch {}
+    throw error;
   }
 
   const json = await response.json();
@@ -60,13 +68,32 @@ function telegramJsonRequest(token, method, payload) {
 
 async function sendText(token, chatId, text) {
   const content = text || 'No output.';
+  const results = [];
 
   for (const chunk of splitMessage(content)) {
-    await telegramJsonRequest(token, 'sendMessage', {
+    const result = await telegramJsonRequest(token, 'sendMessage', {
       chat_id: chatId,
       text: chunk
     });
+    results.push(result);
   }
+
+  return results;
+}
+
+function sendMessage(token, chatId, text) {
+  return telegramJsonRequest(token, 'sendMessage', {
+    chat_id: chatId,
+    text
+  });
+}
+
+function editMessageText(token, chatId, messageId, text) {
+  return telegramJsonRequest(token, 'editMessageText', {
+    chat_id: chatId,
+    message_id: messageId,
+    text
+  });
 }
 
 function sendTyping(token, chatId) {
@@ -96,8 +123,10 @@ async function sendDocument(token, chatId, filePath, options = {}) {
 }
 
 module.exports = {
+  editMessageText,
   getUpdates,
   sendDocument,
+  sendMessage,
   sendText,
   sendTyping,
   splitMessage,
