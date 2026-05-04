@@ -25,6 +25,7 @@ Scheduler -> workflow-runner.js -> localhost gateway.js -> copilot -p
 - Persists the Telegram update offset so restarts do not replay old messages.
 - Persists scheduled jobs under `runtime/jobs.json`.
 - Serializes prompt execution through one gateway queue so concurrent repo edits do not fight each other.
+- Streams replies into a single Telegram message via incremental edits, so long answers are visible as they generate instead of after a full buffered round-trip.
 
 ## Prerequisites
 
@@ -80,6 +81,7 @@ This starts:
 - `gateway.js`
 - `bridge.js`
 - `scheduler.js`
+- `health-probe.js`
 
 If you want to run them separately:
 
@@ -88,6 +90,28 @@ npm run start:gateway
 npm run start:telegram
 npm run start:scheduler
 ```
+
+## Streaming replies
+
+Live Telegram traffic uses incremental message edits instead of a buffered round-trip:
+
+1. `bridge.js` sends a placeholder message (`⌛`) and opens an SSE stream against `POST /v1/prompt` with `{ "stream": true }`.
+2. `gateway.js` invokes copilot with stdout streaming enabled and emits SSE events as chunks arrive: `event: chunk` for each stdout chunk, `event: done` with the final cleaned reply, `event: error` on failure.
+3. The bridge accumulates chunks into a buffer and edits the placeholder. Edits are debounced to ~700ms and the active message rolls over to a new continuation message once it crosses 4000 characters.
+4. If no chunk arrives for 20 seconds (e.g. copilot is running tools), a heartbeat footer (`_…still working (Ns)_`) is appended via edit so the message never looks frozen.
+5. Telegram 429 responses are honored via `retry_after`. "Message is not modified" errors are swallowed.
+
+The buffered (`stream: false`, the default) branch of `POST /v1/prompt` is unchanged and still returns `{ ok, sessionId, reply, elapsedMs }`. The scheduler uses this branch so scheduled deliveries arrive as a single `sendMessage` call, not a chain of edits.
+
+Session persistence is identical for both paths — `runtime/sessions/<sessionId>.json` is written once at the end with the full final reply.
+
+Relevant modules:
+
+- `lib/copilot-cli.js` — `streamCopilot()` async iterator.
+- `gateway.js` — SSE branch on `POST /v1/prompt`.
+- `lib/transport/gateway-client.js` — `streamGateway()` SSE consumer.
+- `lib/transport/telegram-api.js` — `sendMessage`, `editMessageText`, error metadata (`statusCode`, `retryAfter`).
+- `lib/streaming-reply.js` — placeholder + debounced edit loop + heartbeat + 4000-char split + 429 backoff.
 
 ## Telegram commands
 
@@ -156,6 +180,76 @@ The intended authoring path is natural language through Copilot, backed by the s
 - `pause the daily summary`
 
 The scheduler currently supports workflows of kind `copilot-prompt` and Telegram delivery as the first delivery channel.
+
+## Health probe
+
+A separate `health-probe.js` process watches for failure modes that leave the bot superficially up but functionally dead (copilot lost auth, model unavailable, rate-limited, bridge stuck, scheduler erroring, gateway crashed without restart).
+
+Two tiers:
+
+- **Tier 1 — every 30 min, zero token cost.** Hits `GET /v1/status`, checks that `runtime/state.json` was updated within the last hour (proves the bridge is polling Telegram), and looks for fresh `lastStatus: error` entries in `runtime/jobs.json` (scheduler errors).
+- **Tier 2 — every 6 h, low token cost.** Resets the `health-probe` session, then sends `POST /v1/prompt` with `{ "prompt": "Reply with the single word: ok", "bare": true }`. The `bare: true` flag skips the workspace envelope so the prompt is just the literal user message. Reply is matched against `/^[●\s]*ok[\s.!]*$/i`.
+
+On failure, the probe sends one Telegram DM to the admin chat and persists per-class state in `runtime/health-probe.json`. Repeated failures of the same class within 12 h are silenced (logged only). Recovery is silent — no "all good" pings.
+
+Failure classes: `auth`, `rate-limit`, `model`, `network`, `bridge-stalled`, `gateway-down`, `scheduler-error`, `unknown`.
+
+The `/status` Telegram command surfaces the latest probe times and last error.
+
+### Environment knobs
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `HEALTH_PROBE_ENABLED` | `true` | Set to `false` to skip starting the probe. |
+| `HEALTH_PROBE_TIER1_INTERVAL_MS` | `1800000` (30 min) | Tier-1 cadence. Min 60s. |
+| `HEALTH_PROBE_TIER2_INTERVAL_MS` | `21600000` (6 h) | Tier-2 cadence. Set to `0` to disable tier-2. |
+| `HEALTH_PROBE_BRIDGE_STALE_MS` | `3600000` (1 h) | How old `state.json.lastPollAt` must be to count as bridge-stalled. |
+| `HEALTH_PROBE_ALERT_COOLDOWN_MS` | `43200000` (12 h) | Per-class minimum between alerts. |
+| `HEALTH_PROBE_ALERT_CHAT_ID` | first id in `TELEGRAM_ALLOWED_CHAT_IDS` | Where probe alerts are delivered. |
+
+### Manually testing failure detection
+
+```bash
+# Simulate auth failure
+mv ~/.copilot ~/.copilot.bak
+systemctl --user restart kayo-bot.service
+# wait for next tier-2 (or restart triggers a boot probe within ~30s)
+# expect: one Telegram DM "🚨 kayo health probe: auth"
+
+# Restore
+mv ~/.copilot.bak ~/.copilot
+systemctl --user restart kayo-bot.service
+```
+
+The probe writes to `runtime/health-probe.json` only — it never persists to a real user's session.
+
+## Logs
+
+When running under the `kayo-bot.service` systemd user unit, all stdout/stderr from the gateway, bridge, and scheduler goes to journald. There is no longer a `runtime/kayo.log` file — journald handles rotation, compression, and retention.
+
+Common queries:
+
+```bash
+# Live tail
+journalctl --user -u kayo-bot -f
+
+# Last hour
+journalctl --user -u kayo-bot --since '1 hour ago'
+
+# Errors only
+journalctl --user -u kayo-bot -p err
+
+# Match text
+journalctl --user -u kayo-bot | grep 'authentication'
+
+# Since last restart
+journalctl --user -u kayo-bot --since "$(systemctl --user show kayo-bot -p ActiveEnterTimestamp --value)"
+
+# Current journal disk usage
+journalctl --user --disk-usage
+```
+
+If you run the services manually (`npm start`, etc.) outside systemd, output goes to your shell as usual.
 
 ## Environment notes
 
