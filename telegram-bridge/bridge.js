@@ -1,10 +1,17 @@
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const path = require('node:path');
 
 const { loadConfig } = require('./lib/env');
 const { getFileForSend, listDirectory, listRoots } = require('./lib/file-access');
-const { getGatewayStatus, promptGateway, resetGatewaySession } = require('./lib/transport/gateway-client');
+const {
+  getGatewayModel,
+  getGatewayStatus,
+  resetGatewaySession,
+  setGatewayModel
+} = require('./lib/transport/gateway-client');
 const { getUpdates, sendDocument, sendText, sendTyping } = require('./lib/transport/telegram-api');
+const { streamReplyToTelegram } = require('./lib/streaming-reply');
 
 const config = loadConfig();
 
@@ -259,6 +266,10 @@ function formatHelpText() {
     '/sessions',
     '/session current',
     '/session use <session-id|default>',
+    '/model            show current model',
+    '/model <name>     switch model (use "default" or "-" to clear)',
+    '/cron             list scheduled jobs',
+    '/vault [N]        list vault entries (default 20)',
     '/files roots',
     '/files ls <alias:/path>',
     '/file send <alias:/path>',
@@ -278,6 +289,109 @@ function formatRootsMessage() {
   lines.push('');
   lines.push('Example usage: /files ls repo:/finance');
   return lines.join('\n');
+}
+
+function formatCronMessage() {
+  if (!fs.existsSync(config.jobsPath)) {
+    return 'No scheduled jobs file yet.';
+  }
+
+  let document;
+  try {
+    document = JSON.parse(fs.readFileSync(config.jobsPath, 'utf8'));
+  } catch (error) {
+    return `Failed to read jobs.json: ${error.message}`;
+  }
+
+  const jobs = Array.isArray(document.jobs) ? document.jobs : [];
+  if (jobs.length === 0) {
+    return 'No scheduled jobs.';
+  }
+
+  const lines = [`Scheduled jobs (${jobs.length}):`, ''];
+  for (const job of jobs) {
+    const flag = job.enabled === false ? '[off]' : '[on]';
+    const tz = job.timezone ? ` (${job.timezone})` : '';
+    lines.push(`${flag} ${job.id}  ${job.name || ''}`.trimEnd());
+    lines.push(`   schedule: ${job.schedule || '(none)'}${tz}`);
+    if (job.nextRunAt) {
+      lines.push(`   next run: ${job.nextRunAt}`);
+    }
+    if (job.lastStatus) {
+      lines.push(`   last:     ${job.lastStatus}${job.lastRunAt ? ` @ ${job.lastRunAt}` : ''}`);
+    }
+    const delivery = job.workflow && job.workflow.delivery;
+    if (delivery && delivery.channel) {
+      const target = delivery.target ? ` -> ${delivery.target}` : '';
+      lines.push(`   deliver:  ${delivery.channel}${target}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n').trimEnd();
+}
+
+function formatVaultMessage(limit) {
+  const indexPath = path.join(config.repoRoot, 'vault', 'knowledge-base.json');
+  if (!fs.existsSync(indexPath)) {
+    return 'Vault index not found at vault/knowledge-base.json.';
+  }
+
+  let document;
+  try {
+    document = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+  } catch (error) {
+    return `Failed to read knowledge-base.json: ${error.message}`;
+  }
+
+  const entries = Array.isArray(document.entries) ? document.entries : [];
+  if (entries.length === 0) {
+    return 'Vault is empty.';
+  }
+
+  const sorted = entries.slice().sort((a, b) => {
+    const left = String(b.captured_at || '');
+    const right = String(a.captured_at || '');
+    return left.localeCompare(right);
+  });
+
+  const cap = Math.min(Math.max(1, limit || 20), 50);
+  const visible = sorted.slice(0, cap);
+
+  const lines = [`Vault entries (showing ${visible.length} of ${entries.length}):`, ''];
+  visible.forEach((entry, index) => {
+    const title = entry.title || entry.filename || entry.id || '(untitled)';
+    const tags = Array.isArray(entry.tags) ? entry.tags.slice(0, 3).join(', ') : '';
+    const meta = [entry.captured_at, tags].filter(Boolean).join(' | ');
+    lines.push(`${index + 1}. ${title}`);
+    if (meta) {
+      lines.push(`   ${meta}`);
+    }
+    if (entry.filename) {
+      lines.push(`   vault/${entry.filename}`);
+    }
+  });
+
+  return lines.join('\n');
+}
+
+function formatModelLabel(model) {
+  return model && model.trim() ? model.trim() : '(default)';
+}
+
+async function handleModelCommand(text, chatId) {
+  const rest = text.slice('/model'.length).trim();
+
+  if (!rest) {
+    const info = await getGatewayModel(config);
+    await sendText(config.telegramToken, chatId, `Current model: ${formatModelLabel(info.model)}`);
+    return;
+  }
+
+  const next = rest === 'default' || rest === '-' || rest === 'reset' ? '' : rest;
+  const result = await setGatewayModel(config, next);
+  const label = formatModelLabel(result.model);
+  await sendText(config.telegramToken, chatId, `Model set to: ${label}`);
 }
 
 function formatDirectoryListing(result) {
@@ -317,11 +431,23 @@ async function handleDirectCommand(text, chatId, state) {
     const sessionLine = config.copilotContextMode === 'native-session'
       ? `Current logical session: ${logicalSessionId}. Copilot session: ${copilotSessionId}.`
       : `Current session: ${logicalSessionId}.`;
-    await sendText(
-      config.telegramToken,
-      chatId,
-      `Gateway is online. Queued jobs: ${status.queuedJobs}. ${activeLine}\nContext mode: ${config.copilotContextMode}\n${sessionLine}`
-    );
+    const lines = [
+      `Gateway is online. Queued jobs: ${status.queuedJobs}. ${activeLine}`,
+      `Context mode: ${config.copilotContextMode}`,
+      sessionLine
+    ];
+    if (status.healthProbe) {
+      const probe = status.healthProbe;
+      const tier2 = probe.lastTier2At
+        ? `tier-2 ${probe.lastResult || 'unknown'} @ ${probe.lastTier2At}`
+        : 'tier-2 not yet run';
+      const tier1 = probe.lastTier1At ? `tier-1 @ ${probe.lastTier1At}` : 'tier-1 not yet run';
+      lines.push(`Health probe: ${tier1}; ${tier2}.`);
+      if (probe.lastError) {
+        lines.push(`Last error (${probe.lastErrorClass || 'unknown'}): ${probe.lastError.slice(0, 200)}`);
+      }
+    }
+    await sendText(config.telegramToken, chatId, lines.join('\n'));
     return true;
   }
 
@@ -382,6 +508,23 @@ async function handleDirectCommand(text, chatId, state) {
     return true;
   }
 
+  if (text === '/model' || text.startsWith('/model ')) {
+    await handleModelCommand(text, chatId);
+    return true;
+  }
+
+  if (text === '/cron') {
+    await sendText(config.telegramToken, chatId, formatCronMessage());
+    return true;
+  }
+
+  if (text === '/vault' || text.startsWith('/vault ')) {
+    const arg = text.slice('/vault'.length).trim();
+    const limit = arg ? Number.parseInt(arg, 10) : 20;
+    await sendText(config.telegramToken, chatId, formatVaultMessage(Number.isFinite(limit) ? limit : 20));
+    return true;
+  }
+
   if (text === '/files roots') {
     await sendText(config.telegramToken, chatId, formatRootsMessage());
     return true;
@@ -429,6 +572,9 @@ async function main() {
         allowed_updates: ['message']
       });
 
+      state.lastPollAt = new Date().toISOString();
+      saveState(state);
+
       for (const update of updates) {
         try {
           const message = update.message;
@@ -457,27 +603,12 @@ async function main() {
             ? getActiveCopilotSessionId(state, chatId)
             : logicalSessionId;
 
-          await sendTyping(config.telegramToken, chatId);
-          const typingInterval = setInterval(() => {
-            sendTyping(config.telegramToken, chatId).catch(() => {});
-          }, 4000);
-
-          try {
-            const result = await promptGateway(config, {
-              sessionId: gatewaySessionId,
-              prompt: text,
-              context: {
-                channel: 'telegram',
-                telegram_chat_id: String(chatId),
-                telegram_logical_session_id: logicalSessionId,
-                copilot_context_mode: config.copilotContextMode
-              }
-            });
-
-            await sendText(config.telegramToken, chatId, result.reply);
-          } finally {
-            clearInterval(typingInterval);
-          }
+          await streamReplyToTelegram(config, chatId, gatewaySessionId, text, {
+            channel: 'telegram',
+            telegram_chat_id: String(chatId),
+            telegram_logical_session_id: logicalSessionId,
+            copilot_context_mode: config.copilotContextMode
+          });
         } catch (error) {
           const chatId = update.message && update.message.chat ? update.message.chat.id : undefined;
           if (chatId !== undefined && isAuthorized(chatId)) {

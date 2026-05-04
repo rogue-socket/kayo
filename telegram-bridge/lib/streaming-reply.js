@@ -12,7 +12,7 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function streamReplyToTelegram(config, chatId, sessionId, prompt) {
+async function streamReplyToTelegram(config, chatId, sessionId, prompt, context) {
   const token = config.telegramToken;
 
   const initial = await sendMessage(token, chatId, PLACEHOLDER_INITIAL);
@@ -114,7 +114,7 @@ async function streamReplyToTelegram(config, chatId, sessionId, prompt) {
     for await (const event of streamGateway(config, {
       sessionId,
       prompt,
-      context: {
+      context: context || {
         channel: 'telegram',
         telegram_chat_id: String(chatId)
       }
