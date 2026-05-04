@@ -161,10 +161,126 @@ function runCopilot(prompt, options) {
   });
 }
 
+function streamCopilot(prompt, options) {
+  const launch = resolveLaunch(options.copilotBin);
+  const args = [...launch.prefixArgs, '-p', prompt, '-s', '--output-format', 'text'];
+
+  if (options.resumeSessionId) {
+    args.push(`--resume=${options.resumeSessionId}`);
+  }
+
+  if (options.model) {
+    args.push('--model', options.model);
+  }
+
+  args.push(...buildPermissionArgs(options.permissionMode));
+
+  const child = spawn(launch.command, args, {
+    cwd: REPO_ROOT,
+    env: process.env,
+    shell: launch.shell,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  const queue = [];
+  let pending = null;
+  let ended = false;
+  let endError = null;
+  let stdoutAccum = '';
+  let stderrAccum = '';
+
+  function pushEvent(event) {
+    if (pending) {
+      const resolve = pending.resolve;
+      pending = null;
+      resolve({ value: event, done: false });
+    } else {
+      queue.push(event);
+    }
+  }
+
+  function endStream(error) {
+    if (ended) return;
+    ended = true;
+    endError = error || null;
+    if (pending) {
+      const { resolve, reject } = pending;
+      pending = null;
+      if (error) reject(error);
+      else resolve({ value: undefined, done: true });
+    }
+  }
+
+  const timeoutHandle = setTimeout(() => {
+    try { child.kill(); } catch {}
+    pushEvent({ type: 'error', data: `Copilot timed out after ${options.timeoutMs}ms.` });
+    endStream();
+  }, options.timeoutMs);
+
+  child.stdout.on('data', (chunk) => {
+    const text = chunk.toString();
+    stdoutAccum += text;
+    pushEvent({ type: 'chunk', data: text });
+  });
+
+  child.stderr.on('data', (chunk) => {
+    stderrAccum += chunk.toString();
+  });
+
+  child.on('error', (error) => {
+    clearTimeout(timeoutHandle);
+    pushEvent({ type: 'error', data: `Failed to start Copilot: ${error.message}` });
+    endStream();
+  });
+
+  child.on('close', (code, signal) => {
+    clearTimeout(timeoutHandle);
+    const cleanedStdout = stdoutAccum.trim();
+    const cleanedStderr = stderrAccum.trim();
+
+    if (code === 0) {
+      pushEvent({ type: 'done', data: cleanedStdout || cleanedStderr || 'No output.' });
+    } else {
+      const parts = ['Copilot command failed.'];
+      if (code !== null) parts.push(`Exit code: ${code}`);
+      if (signal) parts.push(`Signal: ${signal}`);
+      if (cleanedStdout) parts.push('', 'stdout:', cleanedStdout);
+      if (cleanedStderr) parts.push('', 'stderr:', cleanedStderr);
+      pushEvent({ type: 'error', data: parts.join('\n') });
+    }
+    endStream();
+  });
+
+  return {
+    [Symbol.asyncIterator]() {
+      return {
+        next() {
+          if (queue.length > 0) {
+            return Promise.resolve({ value: queue.shift(), done: false });
+          }
+          if (ended) {
+            if (endError) return Promise.reject(endError);
+            return Promise.resolve({ value: undefined, done: true });
+          }
+          return new Promise((resolve, reject) => {
+            pending = { resolve, reject };
+          });
+        },
+        return() {
+          try { child.kill(); } catch {}
+          endStream();
+          return Promise.resolve({ value: undefined, done: true });
+        }
+      };
+    }
+  };
+}
+
 module.exports = {
   buildPermissionArgs,
   commandExists,
   resolveCommand,
   resolveLaunch,
-  runCopilot
+  runCopilot,
+  streamCopilot
 };
