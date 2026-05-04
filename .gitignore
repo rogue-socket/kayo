@@ -1,3 +1,19 @@
+# Secrets and per-host config
 telegram-bridge/.env
+.env
+.env.local
+
+# Runtime state (offsets, sessions, jobs, health-probe state, logs)
 telegram-bridge/runtime/
-*/node_modules/*
+
+# Dependencies (any depth)
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Stray logs
+*.log
