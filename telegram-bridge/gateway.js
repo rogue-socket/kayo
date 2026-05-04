@@ -2,11 +2,40 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 
-const { loadConfig } = require('./lib/env');
-const { resolveCommand, runCopilot } = require('./lib/copilot-cli');
+const { ENV_PATH, loadConfig } = require('./lib/env');
+const { resolveCommand, runCopilot, streamCopilot } = require('./lib/copilot-cli');
 
 const config = loadConfig();
 const resolvedCopilotBin = resolveCommand(config.copilotBin);
+let currentModel = config.copilotModel || '';
+
+function persistModelToEnv(model) {
+  const value = (model || '').trim();
+  let content = '';
+  if (fs.existsSync(ENV_PATH)) {
+    content = fs.readFileSync(ENV_PATH, 'utf8');
+  }
+
+  const lines = content.split(/\r?\n/);
+  let found = false;
+  const updated = lines.map((line) => {
+    if (/^\s*COPILOT_MODEL\s*=/.test(line)) {
+      found = true;
+      return `COPILOT_MODEL=${value}`;
+    }
+    return line;
+  });
+
+  if (!found) {
+    if (updated.length > 0 && updated[updated.length - 1] === '') {
+      updated.splice(updated.length - 1, 0, `COPILOT_MODEL=${value}`);
+    } else {
+      updated.push(`COPILOT_MODEL=${value}`);
+    }
+  }
+
+  fs.writeFileSync(ENV_PATH, updated.join('\n'));
+}
 
 function ensureStateDirs() {
   fs.mkdirSync(config.sessionsDir, { recursive: true });
@@ -93,6 +122,26 @@ function formatRequestContext(sessionId, requestContext) {
   return lines.join('\n');
 }
 
+function readHealthProbeSummary() {
+  const probePath = config.healthProbe && config.healthProbe.statePath;
+  if (!probePath || !fs.existsSync(probePath)) {
+    return null;
+  }
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(probePath, 'utf8'));
+    return {
+      lastTier1At: raw.lastTier1At || null,
+      lastTier2At: raw.lastTier2At || null,
+      lastResult: raw.lastResult || null,
+      lastError: raw.lastError || null,
+      lastErrorClass: raw.lastErrorClass || null
+    };
+  } catch {
+    return null;
+  }
+}
+
 function buildPromptEnvelope(sessionId, sessionMessages, prompt, requestContext, includeHistory) {
   const cleanedPrompt = prompt.replace(/\r\n/g, '\n').trim();
   const history = includeHistory ? trimHistory(sessionMessages) : [];
@@ -172,8 +221,10 @@ function assertAuthorized(req) {
   }
 }
 
-function enqueuePrompt(sessionId, prompt, requestContext) {
+function enqueuePrompt(sessionId, prompt, requestContext, options = {}) {
   queuedJobs += 1;
+  const onEvent = typeof options.onEvent === 'function' ? options.onEvent : null;
+  const bare = options.bare === true;
 
   const run = async () => {
     queuedJobs -= 1;
@@ -183,24 +234,39 @@ function enqueuePrompt(sessionId, prompt, requestContext) {
     };
 
     try {
-      const nativeSessionMode = config.copilotContextMode === 'native-session';
-      const session = nativeSessionMode ? { sessionId: String(sessionId), messages: [] } : loadSession(sessionId);
-      const envelopedPrompt = buildPromptEnvelope(
-        sessionId,
-        session.messages || [],
-        prompt,
-        requestContext,
-        !nativeSessionMode
-      );
-      const reply = await runCopilot(envelopedPrompt, {
+      const nativeSessionMode = !bare && config.copilotContextMode === 'native-session';
+      const session = (bare || nativeSessionMode)
+        ? { sessionId: String(sessionId), messages: [] }
+        : loadSession(sessionId);
+      const envelopedPrompt = bare
+        ? prompt.replace(/\r\n/g, '\n').trim()
+        : buildPromptEnvelope(sessionId, session.messages || [], prompt, requestContext, !nativeSessionMode);
+      const copilotOptions = {
         copilotBin: resolvedCopilotBin,
         timeoutMs: config.copilotTimeoutMs,
         permissionMode: config.copilotPermissionMode,
-        model: config.copilotModel,
+        model: currentModel,
         resumeSessionId: nativeSessionMode ? String(sessionId) : ''
-      });
+      };
 
-      if (!nativeSessionMode) {
+      let reply;
+      if (onEvent) {
+        let streamErr = null;
+        for await (const event of streamCopilot(envelopedPrompt, copilotOptions)) {
+          onEvent(event);
+          if (event.type === 'done') reply = event.data;
+          if (event.type === 'error') streamErr = new Error(event.data);
+        }
+        if (streamErr) {
+          streamErr.alreadyReported = true;
+          throw streamErr;
+        }
+        if (reply === undefined) reply = '';
+      } else {
+        reply = await runCopilot(envelopedPrompt, copilotOptions);
+      }
+
+      if (!bare && !nativeSessionMode) {
         session.messages = [
           ...(session.messages || []),
           { role: 'user', content: prompt.trim(), createdAt: new Date().toISOString() },
@@ -220,6 +286,15 @@ function enqueuePrompt(sessionId, prompt, requestContext) {
   return resultPromise;
 }
 
+function writeSseEvent(res, type, data) {
+  res.write(`event: ${type}\n`);
+  const text = data === undefined || data === null ? '' : String(data);
+  for (const line of text.split('\n')) {
+    res.write(`data: ${line}\n`);
+  }
+  res.write('\n');
+}
+
 ensureStateDirs();
 
 const server = http.createServer(async (req, res) => {
@@ -233,8 +308,29 @@ const server = http.createServer(async (req, res) => {
         active: activeJob,
         repoRoot: config.repoRoot,
         copilotBin: resolvedCopilotBin,
-        permissionMode: config.copilotPermissionMode
+        permissionMode: config.copilotPermissionMode,
+        model: currentModel,
+        healthProbe: readHealthProbeSummary()
       });
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/v1/model') {
+      writeJson(res, 200, { ok: true, model: currentModel });
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/v1/model') {
+      const body = await readJsonBody(req);
+      const model = typeof body.model === 'string' ? body.model.trim() : '';
+      currentModel = model;
+      try {
+        persistModelToEnv(model);
+      } catch (error) {
+        writeJson(res, 500, { error: `Failed to persist model: ${error.message}` });
+        return;
+      }
+      writeJson(res, 200, { ok: true, model: currentModel });
       return;
     }
 
@@ -266,8 +362,37 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const bare = body.bare === true;
+
+      if (body.stream === true) {
+        res.writeHead(200, {
+          'content-type': 'text/event-stream; charset=utf-8',
+          'cache-control': 'no-cache',
+          connection: 'keep-alive'
+        });
+        if (typeof res.flushHeaders === 'function') {
+          res.flushHeaders();
+        }
+
+        let errorEmitted = false;
+        const onEvent = (event) => {
+          if (event.type === 'error') errorEmitted = true;
+          writeSseEvent(res, event.type, event.data);
+        };
+
+        try {
+          await enqueuePrompt(sessionId, prompt, requestContext, { onEvent, bare });
+        } catch (error) {
+          if (!error.alreadyReported && !errorEmitted) {
+            writeSseEvent(res, 'error', error.message || 'Unknown gateway error.');
+          }
+        }
+        res.end();
+        return;
+      }
+
       const startedAt = Date.now();
-      const reply = await enqueuePrompt(sessionId, prompt, requestContext);
+      const reply = await enqueuePrompt(sessionId, prompt, requestContext, { bare });
       writeJson(res, 200, {
         ok: true,
         sessionId,
