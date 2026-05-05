@@ -1,0 +1,21 @@
+{
+  "name": "kayo-web-fetcher",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Headless-browser web content extractor for Kayo's knowledge ingestion.",
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "jsdom": "^25.0.1",
+    "playwright": "^1.49.0",
+    "youtube-transcript": "^1.2.1"
+  },
+  "scripts": {
+    "fetch": "node fetch.js",
+    "login": "node login.js",
+    "postinstall": "playwright install chromium",
+    "check": "node --check fetch.js && node --check login.js && node --check lib/router.js && node --check lib/browser.js && node --check lib/extractors/twitter.js && node --check lib/extractors/youtube.js && node --check lib/extractors/article.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
