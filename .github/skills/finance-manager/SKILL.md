@@ -28,6 +28,11 @@ When the user asks to track or review money, use this process
   - annualDepositTarget
   - interestRatePercent
   - yearlyContributions: [{year, amount, date, note}]
+- meta.config (durable, written by the dashboard):
+  - expenseCategories: string[]
+  - incomeSources: string[]
+  - paymentMethods: string[]
+  - Treat as the canonical lists for dropdowns. Preserve and extend rather than overwriting.
 
 4. Update rules
 - When logging a new item, append a new object with a deterministic id:

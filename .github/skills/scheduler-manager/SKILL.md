@@ -25,22 +25,23 @@ When the user asks to schedule, automate, pause, resume, inspect, or delete recu
   - `timezone`
   - `enabled`
   - `workflow`
-  - `sessionMode`
+  - `sessionMode` — `per-job` (default, isolated session per job) or `shared-target` (jobs delivering to the same Telegram chat share one session)
   - `createdAt`
   - `updatedAt`
-- Runtime-managed fields may also be present:
-  - `runtimeUpdatedAt`
+- Runtime-managed fields are written only by `scheduler.js` and must not be edited by hand:
+  - `runtimeUpdatedAt` — bumped whenever any runtime field changes; `updatedAt` is NOT touched by the scheduler
   - `lastRunAt`
   - `nextRunAt`
   - `lastStatus`
   - `lastError`
 
 4. Workflow rules
-- Prefer `workflow.kind = "copilot-prompt"` unless the user clearly wants a different workflow type.
+- Only `workflow.kind = "copilot-prompt"` is currently supported by the runner; other kinds will throw `Unsupported workflow kind`.
 - For `copilot-prompt`, store a self-contained `workflow.prompt` that can be run later without relying on the immediate chat turn.
 - Store delivery under `workflow.delivery`.
 - For Telegram delivery, use:
   - `{"channel": "telegram", "target": "<chat id>"}`
+- `workflow.sessionId` is optional. If set, it overrides the session that would otherwise be derived from `sessionMode`. Leave it unset for normal flows; use only when a job needs to plug into a specific named session.
 
 5. Delivery target defaults
 - If the request context includes `telegram_chat_id` and the user does not specify a delivery target, default Telegram delivery to that `telegram_chat_id`.
