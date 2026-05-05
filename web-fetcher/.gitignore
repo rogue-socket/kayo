@@ -1,2 +1,8 @@
 node_modules/
 runtime/
+
+# Stray top-level experiments superseded by lib/extractors/twitter.js,
+# lib/browser.js, and the manual login flow in login.js.
+browser.js
+twitter.js
+login-x-headless.js
