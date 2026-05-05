@@ -64,11 +64,13 @@ Use these rules to assign `type`. Check in order — first match wins:
 | URL contains `twitter.com` or `x.com` with multiple linked statuses, or user says "thread" | `thread` |
 | URL contains `youtube.com` or `youtu.be` | `video` |
 | URL points to a `.pdf` file, or user says "PDF" | `pdf` |
+| URL points to a GitHub/GitLab/Bitbucket repo root | `repo` |
+| URL points to a tool, product, or company landing page (not long-form content) | `website` |
 | URL points to a blog, news site, or long-form page | `article` |
 | No URL — user types a thought, idea, or freeform text | `note` |
 | Content from a message, chat export, email, or app not listed above | `other` |
 
-When in doubt, prefer `article` for web pages and `other` for truly unrecognized formats. Never refuse to classify — always pick the closest type.
+When in doubt, prefer `article` for long-form web pages, `website` for short product/tool pages, and `other` for truly unrecognized formats. Never refuse to classify — always pick the closest type.
 
 ### Internal schema
 
@@ -88,14 +90,13 @@ Convert every input into this internal schema before processing:
 }
 ```
 
-- For URLs: fetch the page content using the fetch_webpage tool
-- For YouTube:
-  - If Yash wants analysis (`#analyze` or full pipeline): fetch transcript if available, otherwise summarize from title + description, then run full extraction
-  - If Yash wants to watch later (`#watch-later`, `#later`, `#save`): store title, URL, channel, and thumbnail only — skip transcript fetch and deep analysis. Mark `"deferred": true` in the index entry so it can be processed later on request.
-- For tweets/threads: reconstruct into a coherent narrative
-- For user notes: use the raw text as-is
-- For unrecognized formats: extract whatever text/metadata is accessible, set type to `other`
-- If content cannot be fetched, store what is available and mark `"fetch_status": "partial"`
+- **For any URL: always call the `web-fetcher` skill first** (`node web-fetcher/fetch.js "<url>"`). This is the canonical content path — it returns full tweet/thread bodies, YouTube transcripts, and clean article text via a headless browser. Do NOT fall back to a plain HTTP `fetch_webpage` for any URL the web-fetcher can handle, because that path returns metadata only and produces shallow summaries. Use the `content` field of the fetcher's JSON output as `raw_content`. See `.github/skills/web-fetcher/SKILL.md` for the full output shape and login flow for gated sources (tweets).
+- For YouTube: web-fetcher handles transcript retrieval. If `transcriptAvailable` is `false` in the result, fall back to `description` for analysis and note `"transcript_status": "unavailable"` in the entry.
+  - If Yash wants to watch later (`#watch-later`, `#later`, `#save`): skip the fetch entirely, store title and URL from the user message, mark `"deferred": true`. The deep fetch can run later on request.
+- For tweets/threads: web-fetcher returns the full thread under `tweets[]`. Reconstruct into a coherent narrative for extraction.
+- For user notes (no URL): use the raw text as-is — no fetcher call.
+- For unrecognized formats: extract whatever text/metadata is accessible, set type to `other`.
+- If web-fetcher exits non-zero or its content is empty, store what is available, mark `"fetch_status": "partial"`, and tell Yash so he can decide whether to retry or re-login.
 
 ## 4. Extraction
 
