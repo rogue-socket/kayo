@@ -28,14 +28,41 @@ function splitMessage(text) {
   return chunks;
 }
 
+const { createLogger } = require('../logger');
+const log = createLogger('telegram-api');
+
 async function telegramRequest(token, method, payload, options = {}) {
   const requestOptions = {
     method: 'POST',
     headers: options.headers || {},
     body: payload
   };
+  const url = `https://api.telegram.org/bot${token}/${method}`;
+  // FormData bodies (sendDocument) can't be safely replayed across a retry, so
+  // only retry when payload is a JSON string. One retry with 200ms backoff is
+  // enough to absorb the transient fetch-failed blips we observed from scheduler.
+  const canRetry = typeof payload === 'string';
 
-  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, requestOptions);
+  let response;
+  let lastNetworkError = null;
+  const maxAttempts = canRetry ? 2 : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      response = await fetch(url, requestOptions);
+      lastNetworkError = null;
+      break;
+    } catch (err) {
+      lastNetworkError = err;
+      if (attempt < maxAttempts) {
+        log.warn('telegram_fetch_retry', { method, attempt, error: err.message });
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
+  }
+  if (lastNetworkError) {
+    log.error('telegram_fetch_failed', { method, attempts: maxAttempts, error: lastNetworkError.message });
+    throw lastNetworkError;
+  }
 
   if (!response.ok) {
     const body = await response.text();
@@ -107,6 +134,26 @@ function getUpdates(token, payload) {
   return telegramJsonRequest(token, 'getUpdates', payload);
 }
 
+function getFile(token, fileId) {
+  return telegramJsonRequest(token, 'getFile', { file_id: fileId });
+}
+
+function getMe(token) {
+  return telegramJsonRequest(token, 'getMe', {});
+}
+
+async function downloadFileToPath(token, telegramFilePath, destPath) {
+  const url = `https://api.telegram.org/file/bot${token}/${telegramFilePath}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Telegram file download failed with status ${response.status}`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  fs.writeFileSync(destPath, buffer);
+  return destPath;
+}
+
 async function sendDocument(token, chatId, filePath, options = {}) {
   const form = new FormData();
   form.append('chat_id', String(chatId));
@@ -123,7 +170,10 @@ async function sendDocument(token, chatId, filePath, options = {}) {
 }
 
 module.exports = {
+  downloadFileToPath,
   editMessageText,
+  getFile,
+  getMe,
   getUpdates,
   sendDocument,
   sendMessage,

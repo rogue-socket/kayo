@@ -104,6 +104,10 @@ function resetGatewaySession(config, sessionId) {
   return gatewayRequest(config, 'POST', '/v1/reset', { sessionId });
 }
 
+function cancelGateway(config, payload = {}) {
+  return gatewayRequest(config, 'POST', '/v1/cancel', payload);
+}
+
 function getGatewayStatus(config) {
   return gatewayRequest(config, 'GET', '/v1/status');
 }
@@ -117,6 +121,7 @@ function setGatewayModel(config, model) {
 }
 
 module.exports = {
+  cancelGateway,
   gatewayRequest,
   getGatewayModel,
   getGatewayStatus,

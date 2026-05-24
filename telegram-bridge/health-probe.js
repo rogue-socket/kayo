@@ -14,9 +14,14 @@ const ALERT_CLASSES = [
   'network',
   'bridge-stalled',
   'gateway-down',
+  'web-browser-down',
   'scheduler-error',
   'unknown'
 ];
+
+const WEB_BROWSER_STATUS_URL =
+  process.env.WEB_BROWSER_STATUS_URL ||
+  `http://${process.env.WEB_BROWSER_HOST || '127.0.0.1'}:${process.env.WEB_BROWSER_PORT || 8788}/v1/status`;
 
 const TIER2_PROMPT = 'Reply with the single word: ok';
 const TIER2_REPLY_RE = /^[●\s]*ok[\s.!]*$/i;
@@ -122,6 +127,7 @@ function suggestionFor(cls) {
     case 'network': return 'Check connectivity / gateway process.';
     case 'bridge-stalled': return 'Restart kayo-bot.service (bridge has stopped polling Telegram).';
     case 'gateway-down': return 'Check gateway.js logs via journalctl --user -u kayo-bot.';
+    case 'web-browser-down': return 'web-browser daemon on 127.0.0.1:8788 is not responding. Check journalctl --user -u kayo-bot for crashes.';
     case 'scheduler-error': return 'Inspect runtime/jobs.json lastError; investigate failing job.';
     default: return 'Inspect journalctl --user -u kayo-bot for stack traces.';
   }
@@ -171,6 +177,25 @@ async function checkGateway(state) {
     return null;
   } catch (error) {
     return { class: 'gateway-down', message: error.message };
+  }
+}
+
+async function checkWebBrowser() {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(WEB_BROWSER_STATUS_URL, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) {
+      return { class: 'web-browser-down', message: `HTTP ${res.status} from ${WEB_BROWSER_STATUS_URL}` };
+    }
+    const body = await res.json().catch(() => null);
+    if (!body || body.ok !== true) {
+      return { class: 'web-browser-down', message: `Unexpected /v1/status body from web-browser` };
+    }
+    return null;
+  } catch (error) {
+    return { class: 'web-browser-down', message: error.message };
   }
 }
 
@@ -236,6 +261,9 @@ async function runTier1(state) {
 
   const gatewayResult = await checkGateway(state);
   if (gatewayResult) failures.push(gatewayResult);
+
+  const webBrowserResult = await checkWebBrowser();
+  if (webBrowserResult) failures.push(webBrowserResult);
 
   const bridgeResult = checkBridge();
   if (bridgeResult) failures.push(bridgeResult);

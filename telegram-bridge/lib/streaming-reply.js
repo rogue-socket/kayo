@@ -1,10 +1,11 @@
-const { editMessageText, sendMessage } = require('./transport/telegram-api');
+const { editMessageText, sendMessage, sendTyping } = require('./transport/telegram-api');
 const { streamGateway } = require('./transport/gateway-client');
 
 const MAX_MESSAGE_CHARS = 4000;
 const EDIT_DEBOUNCE_MS = 700;
 const HEARTBEAT_CHECK_MS = 5000;
 const HEARTBEAT_STALL_MS = 20000;
+const TYPING_REFRESH_MS = 4500;
 const PLACEHOLDER_INITIAL = '⌛';
 const PLACEHOLDER_CONTINUATION = '…';
 
@@ -12,8 +13,45 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function streamReplyToTelegram(config, chatId, sessionId, prompt, context) {
+function formatToolEvent(rawData) {
+  let parsed = rawData;
+  if (typeof rawData === 'string') {
+    try { parsed = JSON.parse(rawData); } catch { return `_…working_`; }
+  }
+  if (!parsed || typeof parsed !== 'object') return `_…working_`;
+
+  const rawName = String(parsed.name || 'tool');
+  const description = (parsed.description || '').toString().trim();
+
+  // Special: report_intent is the model planning, not a real tool call.
+  if (rawName === 'report_intent') {
+    const intent = description || 'thinking';
+    return `_🤔 ${truncate(intent, 80)}_`;
+  }
+
+  // Strip mcp__server__ prefix if present so footer reads cleanly.
+  const name = rawName.replace(/^mcp__/, '').replace(/^mcp\./, '');
+
+  if (description) {
+    return `_🔧 ${name}: ${truncate(description, 80)}_`;
+  }
+  return `_🔧 ${name}_`;
+}
+
+function truncate(text, max) {
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + '…';
+}
+
+async function streamReplyToTelegram(config, chatId, sessionId, prompt, context, options = {}) {
   const token = config.telegramToken;
+
+  // Native typing indicator — fire-and-forget, refresh every 4.5s.
+  sendTyping(token, chatId).catch(() => {});
+  const typingInterval = setInterval(() => {
+    sendTyping(token, chatId).catch(() => {});
+  }, TYPING_REFRESH_MS);
 
   const initial = await sendMessage(token, chatId, PLACEHOLDER_INITIAL);
   let activeMessage = { id: initial.message_id, text: PLACEHOLDER_INITIAL };
@@ -28,6 +66,7 @@ async function streamReplyToTelegram(config, chatId, sessionId, prompt, context)
   let flushChain = Promise.resolve();
   let errorMessage = null;
   let finalReply = '';
+  let cancelled = false;
 
   function totalText() {
     return buffer + (footer ? `\n\n${footer}` : '');
@@ -100,13 +139,11 @@ async function streamReplyToTelegram(config, chatId, sessionId, prompt, context)
 
   const heartbeat = setInterval(() => {
     const stallMs = Date.now() - lastChunkAt;
-    if (stallMs > HEARTBEAT_STALL_MS && !errorMessage) {
+    if (stallMs > HEARTBEAT_STALL_MS && !errorMessage && !footer) {
       const seconds = Math.floor(stallMs / 1000);
       const next = `_…still working (${seconds}s)_`;
-      if (footer !== next) {
-        footer = next;
-        scheduleFlush();
-      }
+      footer = next;
+      scheduleFlush();
     }
   }, HEARTBEAT_CHECK_MS);
 
@@ -114,6 +151,7 @@ async function streamReplyToTelegram(config, chatId, sessionId, prompt, context)
     for await (const event of streamGateway(config, {
       sessionId,
       prompt,
+      attachments: Array.isArray(options.attachments) ? options.attachments : undefined,
       context: context || {
         channel: 'telegram',
         telegram_chat_id: String(chatId)
@@ -125,18 +163,31 @@ async function streamReplyToTelegram(config, chatId, sessionId, prompt, context)
         lastChunkAt = Date.now();
         scheduleFlush();
       } else if (event.type === 'tool') {
-        footer = `_${event.data}_`;
-        scheduleFlush();
+        const formatted = formatToolEvent(event.data);
+        if (formatted && formatted !== footer) {
+          footer = formatted;
+          lastChunkAt = Date.now();
+          scheduleFlush();
+        }
+      } else if (event.type === 'tool_done') {
+        // Keep the footer until next tool or chunk arrives.
+        // Reset the stall timer so heartbeat doesn't fire while tools are pumping.
+        lastChunkAt = Date.now();
       } else if (event.type === 'done') {
         finalReply = event.data || buffer;
         buffer = finalReply;
         footer = '';
       } else if (event.type === 'error') {
-        errorMessage = event.data || 'Unknown gateway error.';
+        if (event.data === 'cancelled') {
+          cancelled = true;
+        } else {
+          errorMessage = event.data || 'Unknown gateway error.';
+        }
       }
     }
   } finally {
     clearInterval(heartbeat);
+    clearInterval(typingInterval);
     if (pendingFlush) {
       clearTimeout(pendingFlush);
       pendingFlush = null;
@@ -144,7 +195,12 @@ async function streamReplyToTelegram(config, chatId, sessionId, prompt, context)
     await flushChain.catch(() => {});
   }
 
-  if (errorMessage) {
+  if (cancelled) {
+    buffer = buffer.trim()
+      ? `${buffer.trim()}\n\n_⏹ Cancelled._`
+      : '⏹ Cancelled.';
+    footer = '';
+  } else if (errorMessage) {
     buffer = `Error: ${errorMessage}`;
     footer = '';
   }

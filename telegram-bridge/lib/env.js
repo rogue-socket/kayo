@@ -1,5 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const dns = require('node:dns');
+
+// Force IPv4-first DNS for every service that loads this module. bridge.js
+// originally hit a hang where Telegram resolved to an IPv6 address whose long-poll
+// never returned even though the TCP handshake succeeded; scheduler.js hit the
+// same failure mode on outbound sendText. Applied here so all entrypoints inherit.
+dns.setDefaultResultOrder('ipv4first');
 
 const BRIDGE_DIR = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(BRIDGE_DIR, '..');
@@ -8,6 +15,7 @@ const STATE_DIR = path.join(BRIDGE_DIR, 'runtime');
 const STATE_PATH = path.join(STATE_DIR, 'state.json');
 const SESSIONS_DIR = path.join(STATE_DIR, 'sessions');
 const JOBS_PATH = path.join(STATE_DIR, 'jobs.json');
+const REGISTRY_PATH = path.join(REPO_ROOT, '.github', 'registry.json');
 
 function parseEnvContent(content) {
   const values = {};
@@ -148,6 +156,10 @@ function parseFileRootEntries(value) {
 function loadConfig() {
   readEnvFile(ENV_PATH);
 
+  if (process.env.GITHUB_PAT && !process.env.GH_TOKEN) {
+    process.env.GH_TOKEN = process.env.GITHUB_PAT;
+  }
+
   const gatewayHost = process.env.GATEWAY_HOST || '127.0.0.1';
   const gatewayPort = coerceNumber(process.env.GATEWAY_PORT, 8787);
 
@@ -159,6 +171,7 @@ function loadConfig() {
     statePath: STATE_PATH,
     sessionsDir: SESSIONS_DIR,
     jobsPath: JOBS_PATH,
+    registryPath: REGISTRY_PATH,
     telegramToken: process.env.TELEGRAM_BOT_TOKEN || '',
     allowedChatIds: parseAllowedChatIds(process.env.TELEGRAM_ALLOWED_CHAT_IDS),
     pollTimeoutSeconds: coerceNumber(process.env.TELEGRAM_POLL_TIMEOUT_SECONDS, 30),
@@ -173,6 +186,7 @@ function loadConfig() {
     copilotContextMode: parseCopilotContextMode(process.env.COPILOT_CONTEXT_MODE),
     copilotPermissionMode: 'yolo',
     copilotModel: (process.env.COPILOT_MODEL || '').trim(),
+    githubPat: process.env.GITHUB_PAT || '',
     fileRoots: parseFileRootEntries(process.env.FILE_ACCESS_ROOTS),
     fileAccessMaxBytes: coerceNumber(process.env.FILE_ACCESS_MAX_BYTES, 20 * 1024 * 1024),
     defaultTimezone: (process.env.DEFAULT_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC').trim(),
@@ -190,6 +204,24 @@ function loadConfig() {
   };
 }
 
+function loadServiceRegistry(registryPath = REGISTRY_PATH) {
+  if (!fs.existsSync(registryPath)) {
+    return { services: [], skills: [], tools: [] };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+    return {
+      services: Array.isArray(parsed.services) ? parsed.services : [],
+      skills: Array.isArray(parsed.skills) ? parsed.skills : [],
+      tools: Array.isArray(parsed.tools) ? parsed.tools : []
+    };
+  } catch (error) {
+    console.error(`Failed to parse ${registryPath}: ${error.message}`);
+    return { services: [], skills: [], tools: [] };
+  }
+}
+
 module.exports = {
   BRIDGE_DIR,
   REPO_ROOT,
@@ -198,9 +230,11 @@ module.exports = {
   STATE_PATH,
   SESSIONS_DIR,
   JOBS_PATH,
+  REGISTRY_PATH,
   applyEnvValues,
   loadConfig,
   loadEnvValues,
+  loadServiceRegistry,
   parseAllowedChatIds,
   parseEnvContent,
   parseFileRootEntries,

@@ -79,9 +79,104 @@ function resolveLaunch(command) {
   };
 }
 
+function appendAttachmentArgs(args, attachments) {
+  if (!Array.isArray(attachments)) return;
+  for (const attachment of attachments) {
+    if (attachment && typeof attachment === 'string') {
+      args.push('--attachment', attachment);
+    }
+  }
+}
+
+// Parse copilot's `--output-format json` JSONL stream.
+// Returns events suitable for downstream consumers:
+//   { type: 'chunk', data: '<delta text>' }   — final-answer text deltas
+//   { type: 'tool',  data: { name, args, description } } — tool starts
+//   { type: 'tool_done', data: { toolCallId, success } } — tool completes
+// Filters ephemeral session.* events and intermediate (non-final) deltas.
+function createJsonStreamParser() {
+  let lineBuffer = '';
+  let answerText = '';
+  const capturedFromDeltas = new Set();
+
+  function parseLines(text) {
+    const events = [];
+    lineBuffer += text;
+    const lines = lineBuffer.split('\n');
+    lineBuffer = lines.pop() || '';
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      let evt;
+      try {
+        evt = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (!evt || typeof evt.type !== 'string') continue;
+
+      const d = evt.data || {};
+
+      // Streaming mode (--stream on) emits assistant.message_delta events
+      // with deltaContent. Collect all of them; tool-call-only messages
+      // don't emit deltas, so this naturally captures only response text.
+      if (evt.type === 'assistant.message_delta' && typeof d.deltaContent === 'string') {
+        answerText += d.deltaContent;
+        events.push({ type: 'chunk', data: d.deltaContent });
+        if (d.messageId) capturedFromDeltas.add(d.messageId);
+        continue;
+      }
+
+      // Non-streaming mode (--stream off) skips deltas and only emits a final
+      // assistant.message with the full content. Also handles the streaming
+      // case's terminating assistant.message — we skip it if we already
+      // accumulated the same messageId via deltas, to avoid double-counting.
+      if (evt.type === 'assistant.message' && typeof d.content === 'string' && d.content) {
+        if (!d.messageId || !capturedFromDeltas.has(d.messageId)) {
+          answerText += d.content;
+          events.push({ type: 'chunk', data: d.content });
+        }
+        continue;
+      }
+
+      if (evt.type === 'tool.execution_start') {
+        const name = d.toolName || 'tool';
+        const argDescription =
+          (d.arguments && typeof d.arguments.description === 'string' && d.arguments.description) ||
+          (d.arguments && typeof d.arguments.command === 'string' && d.arguments.command) ||
+          (d.arguments && typeof d.arguments.intent === 'string' && d.arguments.intent) ||
+          '';
+        events.push({
+          type: 'tool',
+          data: { name, toolCallId: d.toolCallId, description: argDescription }
+        });
+        continue;
+      }
+
+      if (evt.type === 'tool.execution_complete') {
+        events.push({
+          type: 'tool_done',
+          data: { toolCallId: d.toolCallId, success: d.success === true }
+        });
+        continue;
+      }
+    }
+
+    return events;
+  }
+
+  return {
+    feed: parseLines,
+    finalize() {
+      return answerText;
+    }
+  };
+}
+
 function runCopilot(prompt, options) {
   const launch = resolveLaunch(options.copilotBin);
-  const args = [...launch.prefixArgs, '-p', prompt, '-s', '--output-format', 'text', '--stream', 'off'];
+  const args = [...launch.prefixArgs, '-p', prompt, '-s', '--output-format', 'json', '--stream', 'off'];
 
   if (options.resumeSessionId) {
     args.push(`--resume=${options.resumeSessionId}`);
@@ -91,6 +186,7 @@ function runCopilot(prompt, options) {
     args.push('--model', options.model);
   }
 
+  appendAttachmentArgs(args, options.attachments);
   args.push(...buildPermissionArgs(options.permissionMode));
 
   return new Promise((resolve, reject) => {
@@ -101,15 +197,16 @@ function runCopilot(prompt, options) {
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
-    let stdout = '';
+    if (typeof options.onChild === 'function') {
+      try { options.onChild(child); } catch {}
+    }
+
+    const parser = createJsonStreamParser();
     let stderr = '';
     let settled = false;
 
     const finish = (callback, value) => {
-      if (settled) {
-        return;
-      }
-
+      if (settled) return;
       settled = true;
       callback(value);
     };
@@ -120,7 +217,7 @@ function runCopilot(prompt, options) {
     }, options.timeoutMs);
 
     child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
+      parser.feed(chunk.toString());
     });
 
     child.stderr.on('data', (chunk) => {
@@ -134,28 +231,19 @@ function runCopilot(prompt, options) {
 
     child.on('close', (code, signal) => {
       clearTimeout(timeoutHandle);
-      const cleanedStdout = stdout.trim();
+      const finalText = parser.finalize().trim();
       const cleanedStderr = stderr.trim();
 
       if (code === 0) {
-        finish(resolve, cleanedStdout || cleanedStderr || 'No output.');
+        finish(resolve, finalText || cleanedStderr || 'No output.');
         return;
       }
 
       const parts = ['Copilot command failed.'];
-      if (code !== null) {
-        parts.push(`Exit code: ${code}`);
-      }
-      if (signal) {
-        parts.push(`Signal: ${signal}`);
-      }
-      if (cleanedStdout) {
-        parts.push('', 'stdout:', cleanedStdout);
-      }
-      if (cleanedStderr) {
-        parts.push('', 'stderr:', cleanedStderr);
-      }
-
+      if (code !== null) parts.push(`Exit code: ${code}`);
+      if (signal) parts.push(`Signal: ${signal}`);
+      if (finalText) parts.push('', 'partial reply:', finalText);
+      if (cleanedStderr) parts.push('', 'stderr:', cleanedStderr);
       finish(reject, new Error(parts.join('\n')));
     });
   });
@@ -163,7 +251,7 @@ function runCopilot(prompt, options) {
 
 function streamCopilot(prompt, options) {
   const launch = resolveLaunch(options.copilotBin);
-  const args = [...launch.prefixArgs, '-p', prompt, '-s', '--output-format', 'text'];
+  const args = [...launch.prefixArgs, '-p', prompt, '-s', '--output-format', 'json', '--stream', 'on'];
 
   if (options.resumeSessionId) {
     args.push(`--resume=${options.resumeSessionId}`);
@@ -173,20 +261,26 @@ function streamCopilot(prompt, options) {
     args.push('--model', options.model);
   }
 
+  appendAttachmentArgs(args, options.attachments);
   args.push(...buildPermissionArgs(options.permissionMode));
 
   const child = spawn(launch.command, args, {
     cwd: REPO_ROOT,
     env: process.env,
     shell: launch.shell,
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32'
   });
 
+  if (typeof options.onChild === 'function') {
+    try { options.onChild(child); } catch {}
+  }
+
+  const parser = createJsonStreamParser();
   const queue = [];
   let pending = null;
   let ended = false;
   let endError = null;
-  let stdoutAccum = '';
   let stderrAccum = '';
 
   function pushEvent(event) {
@@ -218,9 +312,8 @@ function streamCopilot(prompt, options) {
   }, options.timeoutMs);
 
   child.stdout.on('data', (chunk) => {
-    const text = chunk.toString();
-    stdoutAccum += text;
-    pushEvent({ type: 'chunk', data: text });
+    const events = parser.feed(chunk.toString());
+    for (const evt of events) pushEvent(evt);
   });
 
   child.stderr.on('data', (chunk) => {
@@ -235,16 +328,18 @@ function streamCopilot(prompt, options) {
 
   child.on('close', (code, signal) => {
     clearTimeout(timeoutHandle);
-    const cleanedStdout = stdoutAccum.trim();
+    const finalText = parser.finalize().trim();
     const cleanedStderr = stderrAccum.trim();
 
     if (code === 0) {
-      pushEvent({ type: 'done', data: cleanedStdout || cleanedStderr || 'No output.' });
+      pushEvent({ type: 'done', data: finalText || cleanedStderr || 'No output.' });
+    } else if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+      pushEvent({ type: 'error', data: 'cancelled' });
     } else {
       const parts = ['Copilot command failed.'];
       if (code !== null) parts.push(`Exit code: ${code}`);
       if (signal) parts.push(`Signal: ${signal}`);
-      if (cleanedStdout) parts.push('', 'stdout:', cleanedStdout);
+      if (finalText) parts.push('', 'partial reply:', finalText);
       if (cleanedStderr) parts.push('', 'stderr:', cleanedStderr);
       pushEvent({ type: 'error', data: parts.join('\n') });
     }
@@ -277,6 +372,7 @@ function streamCopilot(prompt, options) {
 }
 
 module.exports = {
+  createJsonStreamParser,
   buildPermissionArgs,
   commandExists,
   resolveCommand,
