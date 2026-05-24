@@ -47,7 +47,8 @@
       ],
       "connections": [
         "ai-agents/2026-04-20-rogue-socket-github-profile.md",
-        "2026-04-20-nginx-logs-ai-traffic-vs-referral-traffic.md"
+        "2026-04-20-nginx-logs-ai-traffic-vs-referral-traffic.md",
+        "2026-05-22-gitogether-git-activity-leaderboards-for-groups.md"
       ],
       "captured_at": "2026-04-20",
       "summary_short": "CMU study found 6M fake GitHub stars across 18K repos. Stars sell for $0.03-$0.85 each and VCs use them as sourcing signals, creating a professionalized manipulation economy.",
@@ -179,7 +180,8 @@
         "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md",
         "ai-agents/2026-04-20-rogue-socket-github-profile.md",
         "ai-agents/2026-04-20-trip-planning-agent-self-grow.md",
-        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md"
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md"
       ],
       "captured_at": "2026-04-20",
       "summary_short": "AI orchestration coordinates multiple AI agents, models, tools and data sources into cohesive systems via three pillars: integration, automation, and management.",
@@ -287,12 +289,19 @@
         "tooling"
       ],
       "connections": [
+        "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md",
+        "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md",
+        "2026-05-07-x-post-hesamation-must-read-rl-environments-guide.md",
+        "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+        "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md",
         "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md",
         "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md",
         "ai-agents/2026-04-20-ai-orchestration.md",
         "ai-agents/2026-04-20-rogue-socket-github-profile.md",
         "ai-agents/2026-04-21-inference-engineering-print-india.md",
-        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md"
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md"
       ],
       "captured_at": "2026-04-20",
       "summary_short": "Comprehensive AI orchestration tool landscape: engineer tools (LangChain, CrewAI, AutoGen, Akka) vs data science tools (Airflow, Kubeflow). AI orchestration vs ML orchestration distinction.",
@@ -342,7 +351,8 @@
         "book-release"
       ],
       "connections": [
-        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md"
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "2026-05-07-x-post-hesamation-must-read-rl-environments-guide.md"
       ],
       "captured_at": "2026-04-21",
       "summary_short": "Philip Kiely launched Inference Engineering print edition in India at Rs825, positioned as a 65% discount.",
@@ -367,9 +377,15 @@
         "claude-code"
       ],
       "connections": [
-        "ai-agents/2026-04-20-ai-orchestration.md",
+        "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md",
+        "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md",
+        "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+        "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md",
         "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
-        "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md"
+        "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md",
+        "ai-agents/2026-04-20-ai-orchestration.md",
+        "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md"
       ],
       "captured_at": "2026-05-05",
       "summary_short": "Boris Cherny says coding is shifting to agent loops, with humans focused on orchestration, review, and product judgment.",
@@ -397,6 +413,230 @@
       "summary_short": "Stored tweet link from @eng_khairallah1, but post text could not be fetched in this environment; retry needed for full analysis.",
       "deferred": false,
       "fetch_status": "partial"
+    },
+    {
+      "id": "kb-20260505-003",
+      "title": "X Post by @_vmlops: paperdraw.dev as a System Design Simulator",
+      "filename": "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md",
+      "source": "https://x.com/_vmlops/status/2049770941312647222?s=20",
+      "type": "tweet",
+      "topics": [
+        "x-posts",
+        "systems-design",
+        "developer-tools"
+      ],
+      "tags": [
+        "x-posts",
+        "systems-design",
+        "developer-tools",
+        "distributed-systems",
+        "chaos-engineering"
+      ],
+      "connections": [
+        "ai-agents/2026-04-20-ai-orchestration.md",
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md"
+      ],
+      "captured_at": "2026-05-05",
+      "summary_short": "Tweet introduces paperdraw.dev, a browser tool for visual system design with live traffic simulation and chaos testing.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260506-001",
+      "title": "X Post by @zeddotdev: Building the Post-Git Collaborative AI Workspace",
+      "filename": "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md",
+      "source": "https://x.com/i/status/2051754884295205031",
+      "type": "tweet",
+      "topics": [
+        "x-posts",
+        "developer-tools",
+        "software-engineering"
+      ],
+      "tags": [
+        "x-posts",
+        "developer-tools",
+        "software-engineering",
+        "agentic-coding",
+        "zed"
+      ],
+      "connections": [
+        "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md",
+        "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+        "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+        "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md",
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md",
+        "2026-05-22-gitogether-git-activity-leaderboards-for-groups.md"
+      ],
+      "captured_at": "2026-05-06",
+      "summary_short": "Zed argues AI should amplify collaborative engineering, not hype. As code gets cheaper, review and shared context become the bottleneck.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260506-002",
+      "title": "X Post by @seelffff: 10 Repos to Cut AI Agent Token Costs",
+      "filename": "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+      "source": "https://x.com/i/status/2051650051428983234",
+      "type": "tweet",
+      "topics": [
+        "x-posts",
+        "developer-tools",
+        "ai-agents"
+      ],
+      "tags": [
+        "x-posts",
+        "developer-tools",
+        "ai-agents",
+        "token-efficiency",
+        "llm-ops"
+      ],
+      "connections": [
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md",
+        "2026-05-07-x-post-hesamation-must-read-rl-environments-guide.md",
+        "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md"
+      ],
+      "captured_at": "2026-05-06",
+      "summary_short": "Tweet curates 10 OSS tools for prompt compression, memory, routing, and token budgeting to sharply reduce AI-agent spend.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260507-001",
+      "title": "X Post by @Hesamation: Must-Read Guide to RL Environments",
+      "filename": "2026-05-07-x-post-hesamation-must-read-rl-environments-guide.md",
+      "source": "https://x.com/i/status/2052022199347712266",
+      "type": "tweet",
+      "topics": [
+        "x-posts",
+        "ai-education",
+        "agent-frameworks"
+      ],
+      "tags": [
+        "x-posts",
+        "ai-education",
+        "agent-frameworks",
+        "reinforcement-learning",
+        "hugging-face"
+      ],
+      "connections": [
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "ai-agents/2026-04-21-inference-engineering-print-india.md",
+        "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md"
+      ],
+      "captured_at": "2026-05-07",
+      "summary_short": "Hesam flags Hugging Face's RL-environments guide as a must-read, centered on cross-framework comparisons for LLM-era workflows.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260507-002",
+      "title": "X Post by @iam_elias1: Block's Goose Open-Source AI Agent",
+      "filename": "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+      "source": "https://x.com/i/status/2052021924021297589",
+      "type": "tweet",
+      "topics": [
+        "x-posts",
+        "developer-tools",
+        "ai-agents"
+      ],
+      "tags": [
+        "x-posts",
+        "developer-tools",
+        "ai-agents",
+        "goose",
+        "open-source"
+      ],
+      "connections": [
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md"
+      ],
+      "captured_at": "2026-05-07",
+      "summary_short": "Post on Block open-sourcing Goose, a local model-agnostic coding agent for long-running autonomous workflows.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260509-001",
+      "title": "X Post by @trq212: Why HTML Is Overtaking Markdown for Agent Artifacts",
+      "filename": "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md",
+      "source": "https://x.com/i/status/2052809885763747935",
+      "type": "tweet",
+      "topics": [
+        "x-posts",
+        "developer-tools",
+        "software-engineering"
+      ],
+      "tags": [
+        "x-posts",
+        "developer-tools",
+        "software-engineering",
+        "html-artifacts",
+        "claude-code"
+      ],
+      "connections": [
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md"
+      ],
+      "captured_at": "2026-05-09",
+      "summary_short": "Thariq argues HTML beats markdown for agent artifacts via richer visuals, better readability, and interactive, shareable outputs.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260514-001",
+      "title": "X Post by @mattepstein: Viral Launch Formula with Claude Code Agents",
+      "filename": "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md",
+      "source": "https://x.com/i/status/2054989194414465222",
+      "type": "tweet",
+      "topics": [
+        "x-posts",
+        "ai-agents",
+        "launch-strategy"
+      ],
+      "tags": [
+        "x-posts",
+        "ai-agents",
+        "launch-strategy",
+        "claude-code",
+        "go-to-market"
+      ],
+      "connections": [
+        "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+        "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+        "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md"
+      ],
+      "captured_at": "2026-05-14",
+      "summary_short": "Matt Epstein details a Claude Code multi-agent launch system built around bold claims, deep research, and iterative hook rewrites.",
+      "deferred": false
+    },
+    {
+      "id": "kb-20260522-001",
+      "title": "Gitogether - Git Activity Leaderboards for Groups",
+      "filename": "2026-05-22-gitogether-git-activity-leaderboards-for-groups.md",
+      "source": "personal note",
+      "type": "note",
+      "topics": [
+        "github",
+        "developer-tools"
+      ],
+      "tags": [
+        "github",
+        "developer-tools",
+        "leaderboards",
+        "git-stats"
+      ],
+      "connections": [
+        "2026-04-20-github-fake-stars-investigation.md",
+        "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md"
+      ],
+      "captured_at": "2026-05-22",
+      "summary_short": "Idea for a platform where groups compete on leaderboards built from Git activity stats like commits and PRs.",
+      "deferred": false
     }
   ]
 }

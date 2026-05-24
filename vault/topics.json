@@ -1,11 +1,14 @@
 {
   "ai-agents": [
+    "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+    "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
     "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md",
     "ai-agents/2026-04-20-ai-orchestration.md",
     "ai-agents/2026-04-20-rogue-socket-github-profile.md",
     "ai-agents/2026-04-20-trip-planning-agent-self-grow.md",
     "ai-agents/2026-04-21-inference-engineering-print-india.md",
-    "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md"
+    "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+    "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md"
   ],
   "trip-planning": [
     "ai-agents/2026-04-20-trip-planning-agent-self-grow.md"
@@ -15,7 +18,8 @@
   ],
   "github": [
     "2026-04-20-github-fake-stars-investigation.md",
-    "ai-agents/2026-04-20-rogue-socket-github-profile.md"
+    "ai-agents/2026-04-20-rogue-socket-github-profile.md",
+    "2026-05-22-gitogether-git-activity-leaderboards-for-groups.md"
   ],
   "open-source": [
     "2026-04-20-github-fake-stars-investigation.md"
@@ -35,10 +39,16 @@
   ],
   "developer-tools": [
     "2026-04-20-github-fake-stars-investigation.md",
+    "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md",
+    "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+    "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md",
+    "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+    "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md",
     "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
     "ai-agents/2026-04-20-ai-orchestration-zapier-guide.md",
     "ai-agents/2026-04-20-ai-orchestration.md",
-    "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md"
+    "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+    "2026-05-22-gitogether-git-activity-leaderboards-for-groups.md"
   ],
   "hiring": [
     "2026-04-20-hire-people-better-than-you.md"
@@ -84,7 +94,8 @@
   ],
   "agent-frameworks": [
     "ai-agents/2026-04-20-rogue-socket-github-profile.md",
-    "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md"
+    "ai-agents/2026-04-20-ai-orchestration-tools-landscape.md",
+    "2026-05-07-x-post-hesamation-must-read-rl-environments-guide.md"
   ],
   "digital-twins": [
     "ai-agents/2026-04-20-rogue-socket-github-profile.md"
@@ -102,7 +113,8 @@
     "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md"
   ],
   "systems-design": [
-    "ai-agents/2026-04-20-ai-orchestration.md"
+    "ai-agents/2026-04-20-ai-orchestration.md",
+    "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md"
   ],
   "multi-agent-systems": [
     "ai-agents/2026-04-20-ai-orchestration.md",
@@ -121,15 +133,31 @@
     "ai-agents/2026-04-20-ai-orchestration-pega-agentic.md"
   ],
   "ai-education": [
-    "ai-agents/2026-04-21-inference-engineering-print-india.md"
+    "ai-agents/2026-04-21-inference-engineering-print-india.md",
+    "2026-05-07-x-post-hesamation-must-read-rl-environments-guide.md"
   ],
   "india-market": [
     "ai-agents/2026-04-21-inference-engineering-print-india.md"
   ],
   "software-engineering": [
-    "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md"
+    "ai-agents/2026-05-05-anthropic-boris-cherny-why-coding-solved-what-comes-next.md",
+    "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md",
+    "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md"
   ],
   "x-posts": [
-    "2026-05-05-x-post-eng-khairallah1-2049784265613967730.md"
+    "2026-05-05-x-post-eng-khairallah1-2049784265613967730.md",
+    "2026-05-05-x-post-vmlops-paperdraw-system-design-tool.md",
+    "2026-05-06-x-post-self-dll-10-repos-cut-ai-agent-token-bill.md",
+    "2026-05-06-x-post-zed-post-git-collaborative-ai-workspace.md",
+    "2026-05-07-x-post-hesamation-must-read-rl-environments-guide.md",
+    "2026-05-07-x-post-elias-al-block-goose-open-source-ai-agent.md",
+    "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md",
+    "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md"
+  ],
+  "html-artifacts": [
+    "2026-05-09-x-post-thariq-html-over-markdown-agent-artifacts.md"
+  ],
+  "launch-strategy": [
+    "2026-05-14-x-post-matt-epstein-viral-launch-formula-claude-code.md"
   ]
 }
