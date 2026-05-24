@@ -17,3 +17,7 @@ Thumbs.db
 
 # Stray logs
 *.log
+
+# Backup files from local edits
+*.bak
+*.bak2

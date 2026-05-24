@@ -67,3 +67,26 @@ When the user asks to track or review money, use this process
 - When the user explicitly asks to open or launch the finance UI, return only the full dashboard URL with no extra text
 - Always return a URL ending in /dashboard.html, never a bare localhost root
 - Use localhost only (127.0.0.1), never a public or remote URL
+
+8. Receipt images (capture from Telegram)
+- When Yash sends a photo of a receipt, bill, payment confirmation, or order summary, treat it as a request to log an expense — even without explicit instructions. The image arrives via `--attachment`, so you can see it directly.
+- Extract these fields from the image:
+  - **date** (YYYY-MM-DD) — prefer the printed date on the receipt; fall back to today in IST if unreadable
+  - **amount** (number) — the final total Yash paid (after discounts, taxes, tip)
+  - **currency** — default `INR` unless the receipt's currency symbol clearly says otherwise (₹/Rs/INR → INR, $/USD → USD, €/EUR → EUR, £/GBP → GBP)
+  - **merchant / source** — name printed at the top (e.g. "Blue Tokai", "Zepto", "Indian Oil", "Uber", "Amazon")
+  - **category** — infer from merchant + items. Reuse an existing value from `meta.config.expenseCategories`; only invent a new category if none fits, and tell Yash you're adding it.
+  - **paymentMethod** — infer if visible ("UPI", "Card", "Cash"). Use an existing value from `meta.config.paymentMethods` when possible; otherwise leave blank and ask Yash.
+  - **note** — one short line (≤60 chars) summarising what was purchased, useful for later review.
+- ID format: `exp-YYYYMMDD-###` per existing rules.
+- Confirmation pattern: log the expense optimistically (YOLO), then reply with a one-line summary like:
+  `Logged ₹248 at Blue Tokai on 2026-05-24 → Cafe & dining (UPI). Reply "undo last" to remove.`
+- Handle "undo last": find the most recent expense by `id` ordering and remove it from `expenses[]`. Confirm what was removed.
+- If extraction is genuinely ambiguous (blurry receipt, can't read the total, conflicting amounts), ask **one** clarifying question instead of guessing — never invent a number.
+- Multiple line items: if the receipt is itemised but you only need one expense entry, sum to the total and put the itemisation in `note` (truncated to 60 chars).
+- Non-receipt images: if the photo isn't a financial document (landscape, screenshot of an article, whiteboard), defer to other skills (knowledge-ingestion for articles/screenshots) — don't force-fit it into expenses.
+
+9. Other financial documents
+- Order confirmations (Amazon, Flipkart, Swiggy, Zepto, Blinkit): same flow as receipts. Order total → expense entry. Merchant is the platform; category is best-fit (groceries, food, household, etc.).
+- Salary slips / income statements: treat as `income[]` entries, not expenses. Extract source (employer), amount, date.
+- Bank statements / multi-transaction PDFs: do **not** auto-bulk-import. Acknowledge it, summarise the totals, and ask Yash which entries to actually log. Bulk-importing without consent leads to duplicates with manually-logged entries.

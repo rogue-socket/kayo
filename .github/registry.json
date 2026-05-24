@@ -1,0 +1,276 @@
+{
+  "$schema": "kayo-registry/v1",
+  "version": 1,
+  "updatedAt": "2026-05-23T21:39:59.668Z",
+  "skills": [
+    {
+      "name": "finance-manager",
+      "path": ".github/skills/finance-manager/SKILL.md",
+      "summary": "Track personal finances from chat (including receipt photos) using finance/finance-data.json and the local dashboard",
+      "triggers": [
+        "money",
+        "expense",
+        "income",
+        "budget",
+        "subscription",
+        "ppf",
+        "investment",
+        "dashboard",
+        "receipt",
+        "bill",
+        "spent",
+        "order"
+      ],
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "knowledge-ingestion",
+      "path": ".github/skills/knowledge-ingestion/SKILL.md",
+      "summary": "Ingest URLs, articles, tweets, videos, PDFs, notes into the vault",
+      "triggers": [
+        "ingest",
+        "save",
+        "vault",
+        "remember this",
+        "read this article"
+      ],
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "vault-reorganizer",
+      "path": ".github/skills/knowledge-ingestion/VAULT-REORGANIZER.md",
+      "summary": "Reorganize, cluster, restructure, or review the quality of vault notes",
+      "triggers": [
+        "reorg",
+        "reorganize",
+        "cluster",
+        "restructure",
+        "tidy",
+        "review vault",
+        "improve notes"
+      ],
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "scheduler-manager",
+      "path": ".github/skills/scheduler-manager/SKILL.md",
+      "summary": "Recurring jobs, cron, reminders backed by telegram-bridge/runtime/jobs.json",
+      "triggers": [
+        "schedule",
+        "every day",
+        "cron",
+        "remind me",
+        "recurring"
+      ],
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "web-fetcher",
+      "path": ".github/skills/web-fetcher/SKILL.md",
+      "summary": "Full-content fetch for URLs (tweets, YouTube transcripts, articles) via the Playwright CLI",
+      "triggers": [
+        "fetch url",
+        "read this link",
+        "extract",
+        "summarize tweet"
+      ],
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "summarise-code",
+      "path": ".github/skills/summarise-code/SKILL.md",
+      "summary": "Explain or summarize a piece of code",
+      "triggers": [
+        "explain code",
+        "summarize this file",
+        "what does this do"
+      ],
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "github",
+      "path": ".github/skills/github/SKILL.md",
+      "summary": "Interact with GitHub via the gh CLI for issues, PRs, repos, releases, gists, workflows",
+      "triggers": [
+        "github",
+        "pr",
+        "issue",
+        "release",
+        "gist",
+        "workflow run",
+        "gh"
+      ],
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "cli-fluency",
+      "path": ".github/skills/cli-fluency/SKILL.md",
+      "summary": "General heuristics for using CLI tools — discovery, preferring specialized tools, capturing reusable patterns",
+      "triggers": [
+        "cli",
+        "command line",
+        "shell",
+        "terminal"
+      ],
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "self-extend",
+      "path": ".github/skills/self-extend/SKILL.md",
+      "summary": "Protocol for Kayo to add new skills, services, or tools to itself via the central registry",
+      "triggers": [
+        "new skill",
+        "teach yourself",
+        "new tool",
+        "extend yourself",
+        "add a service"
+      ],
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "research",
+      "path": ".github/skills/research/SKILL.md",
+      "summary": "Search and browse the web on Yash's behalf — multi-step loop driving the local web-browser daemon",
+      "triggers": [
+        "research",
+        "look up",
+        "find me",
+        "search the web for",
+        "browse for",
+        "are there articles on",
+        "what do people say about"
+      ],
+      "addedAt": "2026-05-24"
+    }
+  ],
+  "services": [
+    {
+      "name": "gateway",
+      "entrypoint": "telegram-bridge/gateway.js",
+      "autostart": true,
+      "summary": "Localhost HTTP front for copilot -p with buffered and SSE streaming branches",
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "telegram-bridge",
+      "entrypoint": "telegram-bridge/bridge.js",
+      "autostart": true,
+      "summary": "Telegram long-poll ingress; forwards messages to the gateway and streams replies back",
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "scheduler",
+      "entrypoint": "telegram-bridge/scheduler.js",
+      "autostart": true,
+      "summary": "Cron runner over runtime/jobs.json; executes copilot-prompt workflows on schedule",
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "health-probe",
+      "entrypoint": "telegram-bridge/health-probe.js",
+      "autostart": true,
+      "summary": "Two-tier liveness probe: cheap status checks every 30 min, real prompt round-trip every 6 h",
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "web-browser",
+      "entrypoint": "web-browser/server.js",
+      "autostart": true,
+      "summary": "Long-lived Playwright daemon on 127.0.0.1:8788; HTTP API for search/open/read driving the research skill",
+      "addedAt": "2026-05-24"
+    }
+  ],
+  "tools": [
+    {
+      "name": "web-fetcher",
+      "binPath": "web-fetcher/fetch.js",
+      "summary": "Playwright-based URL content extractor (tweets, YouTube transcripts, Readability articles)",
+      "installCmd": "cd web-fetcher && npm install",
+      "addedAt": "2025-09-01"
+    },
+    {
+      "name": "gh",
+      "binPath": "/home/yash-agrawal/.local/bin/gh",
+      "summary": "GitHub CLI — issues, PRs, repos, releases, gists, workflows, arbitrary gh api calls",
+      "installCmd": "curl -sSL https://github.com/cli/cli/releases/download/v2.92.0/gh_2.92.0_linux_amd64.tar.gz | tar -xz -C /tmp && cp /tmp/gh_2.92.0_linux_amd64/bin/gh ~/.local/bin/",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "node",
+      "binPath": "/usr/bin/node",
+      "summary": "Node.js runtime — used by all telegram-bridge services and web-fetcher",
+      "installCmd": "sudo apt install nodejs",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "npm",
+      "binPath": "/usr/bin/npm",
+      "summary": "Node package manager",
+      "installCmd": "sudo apt install npm",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "jq",
+      "binPath": "/usr/bin/jq",
+      "summary": "Streaming JSON processor — preferred over grep/sed for JSON",
+      "installCmd": "sudo apt install jq",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "git",
+      "binPath": "/usr/bin/git",
+      "summary": "Git CLI — local repo operations; for github.com round-trips prefer gh",
+      "installCmd": "sudo apt install git",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "curl",
+      "binPath": "/usr/bin/curl",
+      "summary": "HTTP client — use for raw API calls when no specialized CLI exists",
+      "installCmd": "sudo apt install curl",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "python3",
+      "binPath": "/usr/bin/python3",
+      "summary": "Python 3 — quick scripts, date math, ad-hoc data wrangling",
+      "installCmd": "sudo apt install python3",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "rg",
+      "binPath": "/home/yash-agrawal/.local/bin/rg",
+      "summary": "ripgrep — fast recursive code search; respects .gitignore; preferred over grep -r",
+      "installCmd": "curl -sSL https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz | tar -xz -C /tmp && cp /tmp/ripgrep-15.1.0-x86_64-unknown-linux-musl/rg ~/.local/bin/",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "systemctl",
+      "binPath": "/usr/bin/systemctl",
+      "summary": "Systemd user service control — for restarting kayo-bot after service/env changes",
+      "installCmd": "preinstalled with systemd",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "copilot",
+      "binPath": "/snap/bin/copilot",
+      "summary": "GitHub Copilot CLI — the brain Kayo runs prompts through; invoked by gateway.js",
+      "installCmd": "sudo snap install copilot",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "validate-registry",
+      "binPath": "scripts/validate-registry.js",
+      "summary": "Pre-commit check for .github/registry.json — JSON parses, paths exist, skill files have frontmatter, every skill has a routing line. Exit 0 = clean, 1 = issues printed.",
+      "installCmd": "ships with the repo; run via `node scripts/validate-registry.js`",
+      "addedAt": "2026-05-24"
+    },
+    {
+      "name": "wttr-weather",
+      "binPath": "scripts/wttr-weather.sh",
+      "summary": "Fetch a one-line weather forecast from wttr.in",
+      "installCmd": "sudo apt install curl",
+      "addedAt": "2026-05-23"
+    }
+  ]
+}

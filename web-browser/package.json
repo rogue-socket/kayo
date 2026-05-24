@@ -1,0 +1,20 @@
+{
+  "name": "kayo-web-browser",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Long-lived headless-browser daemon for Kayo; HTTP API for search/open/read/click.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check lib/browser.js && node --check lib/search.js && node --check lib/extract.js && node --check lib/actions.js",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "@mozilla/readability": "^0.5.0",
+    "jsdom": "^25.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
